@@ -188,7 +188,7 @@ class MineralApp(tkinter.ttk.Frame):
         fmt = fmt.replace('%C', '%s')
         fmt = fmt.replace('%N', '%s')
         uid = fmt % (*params,)
-        uid.replace(" ", '-')
+        uid = uid.replace(" ", '-')
         return uid
 
     def check_db(self):
@@ -220,7 +220,9 @@ class MineralApp(tkinter.ttk.Frame):
             return
         file_list = os.listdir(self.image_path)
         for fname in file_list:
-            if fname.startswith(uid):
+            basename, extension = os.path.splitext(fname)
+            image_uid = '_'.join(basename.split('_')[0:3])
+            if image_uid==uid:
                 image_file = PIL.Image.open(os.path.join(self.image_path, fname))
                 width, height = image_file.size
                 scale_factor = self.max_fig_size/max(width, height)
@@ -356,6 +358,7 @@ class MineralApp(tkinter.ttk.Frame):
         if idcode:
             mineral['Number'] = int(idcode)
         if mineral['Number']:
+            mineral['Number'] = int(mineral['Number'])
             used_numbers = [ int(m['Number']) for m in self.minerals.values() ]
             if mineral['Number'] in used_numbers:
                 print('Error! Number %d already used! Generating a new one...' % mineral['Number'])

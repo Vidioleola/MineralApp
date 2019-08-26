@@ -39,7 +39,7 @@ print(opts)
 # Setup!
 setup(
     name = 'MineralApp',
-    version = '1.0',
+    version = '1.1',
     description = 'Mineral collection manager',
     long_description = readme(),
     url = 'https://github.com/SimoneCnt/MineralApp',

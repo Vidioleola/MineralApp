@@ -9,32 +9,49 @@ Add and modify minerals
 Click on "Add new mineral" and fill the form to add a new mineral. Here a brief
 description of each field:
 
- - Species: the main minerals in the sample, like "Fluorite", "Smoky Quartz",
-   or "Quartz on Muscovite".
+ - Name: a genral name of the sample, like ``Fluorite``, ``Smoky Quartz``, or 
+   ``Quartz on Muscovite``.
  - Number: and increasing number for each sample; it is given automatically if
-   left blank.
+   left blank. Two samples cannot have the same number.
  - UID: an unique identifier; this is also created automatically if left blank
    according to the rules in Settings (see below).
- - Class: the Nickel-Strunz classification for the main mineral in the sample;
-   e.g. 4.DA.05 for quartz, or 3.AB.25 for fluorite. You can get it from
-   mindat, if left blank it is automatically given the class X.XX.XX.
- - Chemical formula: the chemical composition of the main minerals. (optional)
  - Locality: the locality of the sample, in which mine or state it was found.
-   Usually something like: "cave, state, country", e.g. "Jardinera #1 mine,
-   Inca de Oro, Chile". (optional, but important!)
+   Usually something like: "cave, state, country", e.g. ``Jardinera #1 mine,
+   Inca de Oro, Chile``.
  - Acquisition: how and when you get possession of the sample, like "Bought at
-   mineral show at ---", or "Found myself during field trip at ---". (optional)
- - Fluorescence: If the mineral is fluorescent, add fluorescence color and
-   wavelenght (short-wave, long-wave). (optional)
- - Radioactivity: Indicate if the mineral if radioactive, and its activity.
-   (optional)
+   mineral show at ---", or "Found myself during field trip at ---".
  - Size: the dimension of the sample in whatever units you prefer (cm, inch,
-   millimiters...); e.g. "1 x 2 x 1.5 cm". (optional)
- - Weight: the weight of the sample whatever units you prefer; e.g. "10 g".
-   (optional)
- - Price: how much you paid for the sample, or how much it is worth. (optional)
+   millimiters...); e.g. ``1 x 2 x 1.5 cm``.
+ - Weight: the weight of the sample whatever units you prefer; e.g. ``10 g``.
+ - Price: how much you paid for the sample, or how much it is worth.
+
+While the above fields are general for the whole sample, the following ones are
+specific for each species present in the sample. To divide the information of 
+each specie use the special separator `` ;; ``. See below for examples.
+
+ - Species: the list of species in the sample; e.g. if the sample contains 
+   quartz anf fluorite insert ``Quartz ;; Fluorite``
+ - Class: the Nickel-Strunz classification for the main mineral in the sample;
+   e.g. ``4.DA.05`` for quartz, or ``3.AB.25`` for fluorite. You can get it from
+   mindat, if left blank it is automatically given the class ``X.XX.XX``.
+   For example insert ``4.DA.05 ;; 3.AB.25`` for a sample containing both quartz
+   and fluorite.
+ - Chemical formula: the chemical composition of the main minerals. If the mineral
+   has crystallization water (or similar) use `` . `` as "dot"; e.g. for gypsum use
+   ``CaSO4 . 2H2O`` and *not* ``CaSO4.2H2O``
+ - Fluorescence: If the mineral is fluorescent, add fluorescence color and 
+   strength (w: weak, m: medium, s: strong); e.g. if the the quartz in the sample
+   under long wave UV is not fluorescent but the fluorite has medius strenght 
+   violet fuorescence you can insert ``None ;; Violet (m)`` in the Fluorescence (LW)
+   row. Four entries are dedicated to fluorescence, each one for a different 
+   wavelenght of the UV light: short-wave (254nm), mid-wave (310nm), long-wave
+   (364nm), and blue laser (405nm).
+ - Radioactivity: Indicate if the mineral if radioactive, and its activity.
+
+Last, free field to add any comment:
+
  - Comments: any other comments you have on the sample, like special notes,
-   observations, stories, ... (optional)
+   observations, stories, ...
 
 Once the form is filled, click "Add Mineral!" to store add data. It will then
 appear on the left panel of the app: if you click on it all stored informations

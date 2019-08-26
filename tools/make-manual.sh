@@ -15,8 +15,7 @@ pandoc \
     -M author:"Simone Conti" \
     -M date:"`date +"%b %e, %Y"`" \
     -M link-citations:true \
-    -o manual.pdf
+    -o mineralapp/manual.pdf
 
-mv manual.pdf mineralapp
-ln -s mineralapp/manual.pdf .
+ln -sf mineralapp/manual.pdf .
 

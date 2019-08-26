@@ -10,6 +10,9 @@ import tkinter.filedialog
 import tkinter.messagebox
 import PIL.Image, PIL.ImageTk
 import ttkthemes
+import webbrowser
+import functools
+
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
     def set(self, lo, hi):
@@ -23,9 +26,50 @@ class AutoScrollbar(tkinter.ttk.Scrollbar):
     def place(self, **kw):
         raise TclError("cannot use place with this widget")
 
+
+class HyperlinkManager:
+
+    def __init__(self, text):
+        self.text = text
+        self.text.tag_config("hyper", foreground="blue", underline=1)
+        self.text.tag_bind("hyper", "<Enter>", self._enter)
+        self.text.tag_bind("hyper", "<Leave>", self._leave)
+        self.text.tag_bind("hyper", "<Button-1>", self._click)
+        self.reset()
+
+    def reset(self):
+        self.links = {}
+
+    def add(self, action):
+        tag = "hyper-%d" % len(self.links)
+        self.links[tag] = action
+        return "hyper", tag
+
+    def _enter(self, event):
+        self.text.config(cursor="hand2")
+
+    def _leave(self, event):
+        self.text.config(cursor="")
+
+    def _click(self, event):
+        for tag in self.text.tag_names(tkinter.CURRENT):
+            if tag[:6] == "hyper-":
+                self.links[tag]()
+                return
+
+def click(url):
+    if sys.platform=='darwin':
+        subprocess.call(['open', url])
+    else:
+        webbrowser.open(url)
+
+
 class MineralApp(tkinter.ttk.Frame):
 
-    fields = [ 'Species', 'Number', 'UID', 'Class', 'Chemical Formula', 'Locality', 'Acquisition', 'Fluorescence', 'Radioactivity', 'Size', 'Weight', 'Price', 'Comments' ]
+    fields = [ 'Name', 'Number', 'UID', 'Locality', 'Acquisition', 'Size', 'Weight', 'Price',
+        'Species', 'Class', 'Chemical Formula', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
+        'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence',
+        'Radioactivity', 'Comments' ]
     minerals = {}
     selected = None
     max_fig_size = 400.0
@@ -170,8 +214,8 @@ class MineralApp(tkinter.ttk.Frame):
         # %C -> Class
         # %N -> Number
         fmt = self.uid_fmt
-        specie = re.sub('[^a-zA-Z0-9 \n\.]', '', m['Species'])
-        klass = m['Class'].split(',')[0]
+        name = re.sub('[^a-zA-Z0-9 ]', '', m['Name']).strip()
+        klass = m['Class'].split(';;')[0].strip()
         number = '%d' % int(m['Number'])
         params = list()
         l = len(fmt)
@@ -179,7 +223,7 @@ class MineralApp(tkinter.ttk.Frame):
             if c=='%' and i+1<=l:
                 k = fmt[i+1]
                 if k == 'S':
-                    params.append(specie)
+                    params.append(name)
                 elif k == 'C':
                     params.append(klass)
                 elif k == 'N':
@@ -202,6 +246,11 @@ class MineralApp(tkinter.ttk.Frame):
             for key in mineral.keys():
                 if key not in self.fields:
                     print("WARNING! Key %s is not recognised!" % (key))
+            if not mineral['Name']:
+                mineral['Name'] = mineral['Species']
+            if 'Fluorescence' in mineral.keys():
+                mineral['Fluorescence (SW)'] = mineral['Fluorescence']
+                del mineral['Fluorescence']
             new_uid = self.get_id(mineral)
             if new_uid!=uid:
                 mineral['UID'] = new_uid
@@ -238,22 +287,21 @@ class MineralApp(tkinter.ttk.Frame):
                 self.images[desc] = image_render
 
     def insert_chemical_formula(self, text, formula):
-        text.insert(tkinter.END, '%-16s : ' % ('Chemical Formula'))
         if not formula:
-            text.insert(tkinter.END, 'None\n')
+            text.insert(tkinter.END, 'None')
             return
+        formula = formula.replace(' . ', '\u30fb')
         subscript = True
         for char in formula:
-            if char.isdigit() and subscript:
+            if (char.isdigit() or char=='.') and subscript:
                 text.insert(tkinter.END, char, 'subscript')
-            elif char=='.':
+            elif char=='\u30fb':
                 text.insert(tkinter.END, '\u30fb')
                 subscript = False
             else:
                 text.insert(tkinter.END, char)
                 if char.isalpha():
                     subscript = True
-        text.insert(tkinter.END, '\n')
 
     def show_minerals(self):
         def onselect(evt):
@@ -270,19 +318,78 @@ class MineralApp(tkinter.ttk.Frame):
             text.tag_configure("center", justify='center')
             text.tag_configure("superscript", offset=4)
             text.tag_configure("subscript", offset=-4)
-            text.insert(tkinter.END, mineral['Species'] + '\n')
-            text.insert(tkinter.END, '-'*len(mineral['Species']) + '\n')
-            for field in self.fields:
-                if field=='Chemical Formula':
-                    self.insert_chemical_formula(text, mineral['Chemical Formula'])
-                #elif field=='Class':
-                #    text.insert(tkinter.END, 'Class:\t%s\n' % (mineral['Class']))
-                #    for key,val in self.nickel_strunz.items():
-                #        if mineral['Class'].startswith(key):
-                #            text.insert(tkinter.END, '\t%s: %s\n' % (key, val))
-                else:
-                    text.insert(tkinter.END, '%-16s : %s\n' % (field, str(mineral[field])))
+
+            # Mineral Name
+            text.insert(tkinter.END, mineral['Name'] + '\n')
+            text.insert(tkinter.END, '-'*len(mineral['Name']) + '\n')
+
+            # Spacer
             text.insert(tkinter.END, '\n')
+
+            # Number of UID
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Number', str(mineral['Number'])))
+            text.insert(tkinter.END, '%-20s : %s\n' % ('UID', str(mineral['UID'])))
+
+            # Spacer
+            text.insert(tkinter.END, '\n')
+
+            # Regex to find [[MINDAT:xxx-####]]
+            regex = re.compile('\[\[MINDAT:(\w{3}-\d*)\]\]')
+
+            # Locality
+            text.insert(tkinter.END, '%-20s : ' % ('Locality'))
+            locality = mineral['Locality']
+            if locality:
+                results = regex.findall(locality)
+                for res in results:
+                    locality = locality.replace('[[MINDAT:%s]]' % (res), '')
+                locality = locality.strip()
+                text.insert(tkinter.END, '%s' % (locality))
+                for res in results:
+                    text.insert(tkinter.END, " ")
+                    text.insert(tkinter.END, "(mindat)", hyperlink.add(functools.partial(click, 'http://www.mindat.org/%s.html' % (res))))
+                text.insert(tkinter.END, '\n')
+            else:
+                text.insert(tkinter.END, 'Null\n')
+
+            # Overall info of sample
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Acquisition', str(mineral['Acquisition'])))
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Size', str(mineral['Size'])))
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Weight', str(mineral['Weight'])))
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Price/Value', str(mineral['Price'])))
+
+            # Spacer
+            text.insert(tkinter.END, '\n')
+
+            # Info of each species
+            keys = ['Species', 'Chemical Formula', 'Class', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
+                'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence', 'Radioactivity']
+            for key in keys:
+                text.insert(tkinter.END, '%-20s : ' % (key))
+                if mineral[key]:
+                    vals = mineral[key].split(';;')
+                    for v in vals:
+                        v = v.strip()
+                        if key=='Chemical Formula':
+                            self.insert_chemical_formula(text, v)
+                            text.insert(tkinter.END, ' '*(20-len(v)))
+                        elif key=='Species':
+                            text.insert(tkinter.END, '%s' % (v), hyperlink.add(functools.partial(click, 'http://www.mindat.org/show.php?name=%s' % (v))))
+                            text.insert(tkinter.END, ' '*(20-len(v)))
+                        else:
+                            text.insert(tkinter.END, '%-20s' % (v))
+                text.insert(tkinter.END, '\n')
+
+            # Spacer
+            text.insert(tkinter.END, '\n')
+
+            # Comments
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Comments', str(mineral['Comments'])))
+
+            # Spacer
+            text.insert(tkinter.END, '\n')
+
+            # Images
             self.load_images(mineral['UID'])
             if 'reference' in self.images.keys():
                 text.image_create(tkinter.END, image=self.images['reference'])
@@ -334,6 +441,7 @@ class MineralApp(tkinter.ttk.Frame):
         scroll2x.grid(row=1, column=0, sticky='ew')
         text = tkinter.Text(frm2, wrap='word', state='disabled', highlightthickness=0, yscrollcommand=scroll2y.set, xscrollcommand=scroll2x.set)
         text.grid(row=0, column=0, sticky='nesw', padx=5, pady=5)
+        hyperlink = HyperlinkManager(text)
         scroll2y.config(command=text.yview)
         scroll2x.config(command=text.xview)
 
@@ -382,9 +490,9 @@ class MineralApp(tkinter.ttk.Frame):
         def makeform(root):
             entries = []
             for row, field in enumerate(self.fields):
-                lab = tkinter.ttk.Label(window, width=15, text=field, anchor='w')
+                lab = tkinter.ttk.Label(window, width=20, text=field, anchor='w')
                 lab.grid(row=row, column=0, padx=5, pady=5)
-                ent = tkinter.ttk.Entry(window, width=30)
+                ent = tkinter.ttk.Entry(window, width=100)
                 ent.grid(row=row, column=1, padx=5, pady=5, sticky='ew')
                 if modify and mineral[field]:
                     ent.insert(tkinter.END, mineral[field])

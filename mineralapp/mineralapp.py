@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-# https://www.mindat.org/strunz.php
-
-import os, sys, json, re
+import os, sys, io, json, re
 import subprocess
 import tkinter
 import tkinter.ttk
 import tkinter.filedialog
 import tkinter.messagebox
-import PIL.Image, PIL.ImageTk
+import PIL
 import ttkthemes
 import webbrowser
 import functools
+import reportlab, reportlab.platypus, reportlab.lib.styles
 
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
@@ -78,7 +77,6 @@ class MineralApp(tkinter.ttk.Frame):
     uid_fmt = '%C_%S_%N'
 
     def __init__(self, parent, *args, **kwargs):
-        #self.read_nickel_strunz()
         tkinter.ttk.Frame.__init__(self, parent, *args, **kwargs)
         self.winfo_toplevel().title("MineralApp")
         self.set_icon()
@@ -534,54 +532,125 @@ class MineralApp(tkinter.ttk.Frame):
     def modify_selected(self):
         self.addmod_mineral(modify=True)
 
-    #def read_nickel_strunz(self):
-    #    ns = dict()
-        #with open('nickel-strunz.txt', 'r') as fp:
-        #    for line in fp.readlines():
-        #        if not line or line[0]=='#' or len(line)==1:
-        #            continue
-        #        code, desc = line.strip().split(' ', 1)
-        #        ns[code] = desc
-    #    self.nickel_strunz = ns
+    def _report_write_data(self, mineral):
+        story = list()
+        styles = reportlab.lib.styles.getSampleStyleSheet()
+        normal = styles['Normal']
+        normal.fontSize = 10
+        title = styles["Heading1"]
+        title.fontSize = 14
+        # Title
+        ptext = '%s [%d]' % (mineral['Name'], mineral['Number'])
+        story.append(reportlab.platypus.Paragraph(ptext, title))
+        # Sample properties
+        fields = [ 'UID', 'Locality', 'Acquisition', 'Size', 'Weight', 'Price']
+        data = list()
+        for field in fields:
+            p1 = reportlab.platypus.Paragraph('<b>%s</b>:' % (field), normal)
+            p2 = reportlab.platypus.Paragraph(str(mineral[field]), normal)
+            data.append([p1, p2])
+        t = reportlab.platypus.Table(data, colWidths=[4*reportlab.lib.units.cm, None])
+        t.setStyle(reportlab.platypus.TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1), 0),
+                ('RIGHTPADDING',(0,0),(-1,-1), 0),
+            ]))
+        t.hAlign = 'LEFT'
+        story.append(t)
+        # Species properties
+        fields = ['Species', 'Class', 'Chemical Formula', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
+            'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence', 'Radioactivity']
+        data = list()
+        for field in fields:
+            if not mineral[field] or mineral[field].lower()=='no':
+                continue
+            vv = [ v for v in str(mineral[field]).split(';;') if v.lower().strip()!='no']
+            if not any(vv):
+                continue
+            vals = [reportlab.platypus.Paragraph('<b>'+field+':</b>', normal)] + [reportlab.platypus.Paragraph(s, normal) for s in str(mineral[field]).split(';;') ]
+            data.append(vals)
+        ns = len(mineral['Species'].split(';;'))
+        t = reportlab.platypus.Table(data, colWidths=[4*reportlab.lib.units.cm]+[None]*ns)
+        t.setStyle(reportlab.platypus.TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1), 0),
+                ('RIGHTPADDING',(0,0),(-1,-1), 0),
+            ]))
+        t.hAlign = 'LEFT'
+        story.append(t)
+        # Comments are last
+        field = 'Comments'
+        data = list()
+        p1 = reportlab.platypus.Paragraph('<b>%s</b>:' % (field), normal)
+        p2 = reportlab.platypus.Paragraph(str(mineral[field]), normal)
+        data.append([p1, p2])
+        t = reportlab.platypus.Table(data, colWidths=[4*reportlab.lib.units.cm, None])
+        t.setStyle(reportlab.platypus.TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1), 0),
+                ('RIGHTPADDING',(0,0),(-1,-1), 0),
+            ]))
+        t.hAlign = 'LEFT'
+        story.append(t)
+        story.append(reportlab.platypus.Spacer(1, 12))
+        return story
+
+    def _report_insert_images(self, uid, max_fig_size=5*reportlab.lib.units.cm, scale_quality=2.0):
+        if not self.image_path:
+            return list()
+        story = list()
+        file_list = os.listdir(self.image_path)
+        images = list()
+        for fname in file_list:
+            basename, extension = os.path.splitext(fname)
+            image_uid = '_'.join(basename.split('_')[0:3])
+            if image_uid==uid:
+                # Create image with PIL and resize it
+                image_file = PIL.Image.open(os.path.join(self.image_path, fname))
+                width, height = image_file.size
+                scale_factor = scale_quality*max_fig_size/max(width, height)
+                image_scaled = image_file.resize((int(width*scale_factor), int(height*scale_factor)), PIL.Image.ANTIALIAS)
+                # Save to bytestring
+                image_str = io.BytesIO()
+                image_scaled.save(image_str, 'PNG')
+                image_str.seek(0)
+                # Create ReportLab Image from bytestring
+                image = reportlab.platypus.Image(image_str)
+                image.drawHeight /= scale_quality
+                image.drawWidth /= scale_quality
+                images.append(image)
+        if len(images)==0:
+            return list()
+        data = list()
+        row = list()
+        for i, img in enumerate(images):
+            if i%3==0 and len(row)>0:
+                data.append(row)
+                row = list()
+            row.append(img)
+        data.append(row)
+        t = reportlab.platypus.Table(data, colWidths=None)
+        t.setStyle(reportlab.platypus.TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ]))
+        story.append(t)
+        story.append(reportlab.platypus.Spacer(1, 12))
+        return story
+
 
     def export_report(self):
-        fname = tkinter.filedialog.asksaveasfilename(initialdir=os.getcwd(), title="Select file")
+        fname = tkinter.filedialog.asksaveasfilename(title="Select file", initialfile='report.pdf')
         if fname:
-            with open(fname, 'w') as fp:
-                fp.write("\\documentclass[10pt,letterpaper]{article}\n")
-                fp.write("\\usepackage[utf8]{inputenc}\n")
-                fp.write("\\usepackage{amsmath}\n")
-                fp.write("\\usepackage{amsfonts}\n")
-                fp.write("\\usepackage{amssymb}\n")
-                fp.write("\\usepackage{graphicx}\n")
-                fp.write("\\usepackage{tabularx}\n")
-                fp.write("\\usepackage[version=4]{mhchem}\n")
-                fp.write("\\usepackage[paperwidth=5.5in, paperheight=8.5in,left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}\n\n")
-                fp.write("\\begin{document}\n\n")
-                for minkey in sorted(self.minerals.keys()):
-                    mineral = self.minerals[minkey]
-                    fp.write("\\section*{SC%s - %s}\n" % (str(mineral['Number']), mineral['Species']))
-                    fp.write("\\begin{tabularx}{\\textwidth}{l>{\\raggedright\\arraybackslash}X}\n")
-                    for key in self.fields:
-                        text = str(mineral[key])
-                        text = text.replace("_", "\_")
-                        text = text.replace("%", "\%")
-                        text = text.replace("#", "\#")
-                        text = text.replace("$", "\$")
-                        if key=="Chemical Formula":
-                            fp.write("\\textbf{%s:} & \\ce{%s}\\\\\n" % (key, text))
-                        elif key=='Number':
-                            fp.write("\\textbf{%s:} & SC%s\\\\\n" % (key, text))
-                        elif key=='Class':
-                            fp.write("\\textbf{%s:} & %s\\\\\n" % (key, text))
-                            #for nskey,nsval in self.nickel_strunz.items():
-                            #    if mineral['Class'].startswith(nskey):
-                            #        fp.write(" & %s: %s\\\\\n" % (nskey, nsval))
-                        else:
-                            fp.write("\\textbf{%s:} & %s\\\\\n" % (key, text))
-                    fp.write("\\end{tabularx}\n")
-                    fp.write("\\clearpage\n\n")
-                fp.write("\\end{document}")
+            doc = reportlab.platypus.SimpleDocTemplate(fname, pagesize=reportlab.lib.pagesizes.letter,
+                rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18,
+                title='Mineral Collection Report', author='MineralApp - https://github.com/SimoneCnt/MineralApp')
+            story = list()
+            for mineral in self.minerals.values():
+                story += self._report_write_data(mineral)
+                story += self._report_insert_images(mineral['UID'])
+            doc.build(story)
+
 
 def main_gui():
     root = tkinter.Tk()

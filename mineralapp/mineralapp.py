@@ -6,12 +6,13 @@ import tkinter
 import tkinter.ttk
 import tkinter.filedialog
 import tkinter.messagebox
-import PIL
+import PIL, PIL.ImageTk
 import ttkthemes
 import webbrowser
 import functools
 import reportlab, reportlab.platypus, reportlab.lib.styles
 
+from version import version
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
     def set(self, lo, hi):
@@ -78,7 +79,7 @@ class MineralApp(tkinter.ttk.Frame):
 
     def __init__(self, parent, *args, **kwargs):
         tkinter.ttk.Frame.__init__(self, parent, *args, **kwargs)
-        self.winfo_toplevel().title("MineralApp")
+        self.winfo_toplevel().title("MineralApp " + version)
         self.set_icon()
         self.style = ttkthemes.ThemedStyle(self)
         self.current_style = 'plastik'
@@ -256,7 +257,7 @@ class MineralApp(tkinter.ttk.Frame):
         self.minerals = checked
 
     def save_to_file(self):
-        fname = tkinter.filedialog.asksaveasfilename(initialdir=os.getcwd(), title="Select file")
+        fname = tkinter.filedialog.asksaveasfilename(title="Select file", initialfile='minerals.json')
         if fname:
             with open(fname, 'w') as fp:
                 json.dump(self.minerals, fp, indent=4, sort_keys=True)

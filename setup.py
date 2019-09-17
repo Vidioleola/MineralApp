@@ -3,7 +3,6 @@
 import os
 import platform
 import setuptools
-from setuptools import setup
 
 
 # Detailed description from README.md
@@ -13,7 +12,7 @@ def readme():
 
 
 # Platform-dependent options
-print(platform.system())
+setup_requires = ["pillow", "ttkthemes", "reportlab"]
 if platform.system()=='Linux':
     opts = dict(
             include_package_data=True,
@@ -24,22 +23,26 @@ elif platform.system()=='Darwin':
             data_files = ['manual.pdf'],
             app = ['mineralapp/mineralapp.py'],
             options = {'py2app': {
-                            'packages' : ['PIL', 'ttkthemes'],
+                            'packages' : ['PIL', 'ttkthemes', 'reportlab'],
                             'excludes' : ['numpy'],
                             'iconfile' : 'icon/mineralapp.icns',
                     }
                 },
-            setup_requires=['py2app'],
         )
+    setup_requires += ['py2app'],
 else:
     opts = dict()
 
-print(opts)
+
+# Version
+with open('mineralapp/version.py') as fp:
+    version = "".join(fp.readlines()).split('=')[1].strip().strip('"')
+
 
 # Setup!
-setup(
+setuptools.setup(
     name = 'MineralApp',
-    version = '1.1',
+    version = version,
     description = 'Mineral collection manager',
     long_description = readme(),
     url = 'https://github.com/SimoneCnt/MineralApp',
@@ -47,6 +50,7 @@ setup(
     author_email = 'simonecnt@gmail.com',
     license = 'GPLv3',
     packages = setuptools.find_packages(),
+    setup_requires = setup_requires,
     entry_points = {
         'gui_scripts' : [ 'mineralapp = mineralapp.mineralapp:main_gui' ]
     },

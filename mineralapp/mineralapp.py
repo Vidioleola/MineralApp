@@ -12,7 +12,10 @@ import webbrowser
 import functools
 import reportlab, reportlab.platypus, reportlab.lib.styles
 
-from version import version
+try:
+    from .version import version
+except ImportError:
+    from version import version
 
 class AutoScrollbar(tkinter.ttk.Scrollbar):
     def set(self, lo, hi):
@@ -107,13 +110,13 @@ class MineralApp(tkinter.ttk.Frame):
         dirs = [ os.getcwd(), os.path.dirname(__file__), '.', '..', 'icon', '../icon/' ]
         for d in dirs:
             p = os.path.join(d, 'icon-512.png')
-            print('Testing', p)
+            #print('Testing', p)
             if os.path.isfile(p):
-                print('Opening image', p)
+                #print('Opening image', p)
                 img = PIL.ImageTk.PhotoImage(PIL.Image.open(p))
                 self.winfo_toplevel().tk.call('wm', 'iconphoto', self.winfo_toplevel()._w, img)
                 return
-        print('No icon image found.')
+        #print('No icon image found.')
 
     def settings(self):
         root = tkinter.Toplevel(self.parent)
@@ -295,9 +298,7 @@ class MineralApp(tkinter.ttk.Frame):
                 nchar = formula[n+1]
             else:
                 nchar = None
-            print(char, nchar)
             if char in ['+', '-'] or nchar in ['+', '-']:
-                print('superscript')
                 text.insert(tkinter.END, char, 'superscript')
             elif (char.isdigit() or char=='.') and subscript:
                 text.insert(tkinter.END, char, 'subscript')

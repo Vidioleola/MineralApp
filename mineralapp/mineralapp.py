@@ -287,12 +287,19 @@ class MineralApp(tkinter.ttk.Frame):
 
     def insert_chemical_formula(self, text, formula):
         if not formula:
-            text.insert(tkinter.END, 'None')
             return
         formula = formula.replace(' . ', '\u30fb')
         subscript = True
-        for char in formula:
-            if (char.isdigit() or char=='.') and subscript:
+        for n,char in enumerate(formula):
+            if n<len(formula)-1:
+                nchar = formula[n+1]
+            else:
+                nchar = None
+            print(char, nchar)
+            if char in ['+', '-'] or nchar in ['+', '-']:
+                print('superscript')
+                text.insert(tkinter.END, char, 'superscript')
+            elif (char.isdigit() or char=='.') and subscript:
                 text.insert(tkinter.END, char, 'subscript')
             elif char=='\u30fb':
                 text.insert(tkinter.END, '\u30fb')

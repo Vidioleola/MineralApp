@@ -69,7 +69,7 @@ def click(url):
 
 class MineralApp(tkinter.ttk.Frame):
 
-    fields = [ 'Name', 'Number', 'UID', 'Locality', 'Acquisition', 'Size', 'Weight', 'Price',
+    fields = [ 'Name', 'Number', 'UID', 'Locality', 'Acquisition', 'Size', 'Weight', 'Price', 'Collection',
         'Species', 'Class', 'Chemical Formula', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
         'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence',
         'Radioactivity', 'Comments' ]
@@ -110,13 +110,10 @@ class MineralApp(tkinter.ttk.Frame):
         dirs = [ os.getcwd(), os.path.dirname(__file__), '.', '..', 'icon', '../icon/' ]
         for d in dirs:
             p = os.path.join(d, 'icon-512.png')
-            #print('Testing', p)
             if os.path.isfile(p):
-                #print('Opening image', p)
                 img = PIL.ImageTk.PhotoImage(PIL.Image.open(p))
                 self.winfo_toplevel().tk.call('wm', 'iconphoto', self.winfo_toplevel()._w, img)
                 return
-        #print('No icon image found.')
 
     def settings(self):
         root = tkinter.Toplevel(self.parent)
@@ -197,7 +194,7 @@ class MineralApp(tkinter.ttk.Frame):
         fname = tkinter.filedialog.askopenfilename(title="Select file")
         if fname:
             if not os.path.isfile(fname):
-                print("ERROR! <%s> does not exist. Doing nothing." % (fname))
+                tkinter.messagebox.showerr("ERROR!", "<%s> does not exist. Doing nothing." % (fname))
                 return
             with open(fname, 'r') as fp:
                 self.minerals = json.load(fp)
@@ -247,12 +244,7 @@ class MineralApp(tkinter.ttk.Frame):
                     mineral[key] = None
             for key in mineral.keys():
                 if key not in self.fields:
-                    print("WARNING! Key %s is not recognised!" % (key))
-            if not mineral['Name']:
-                mineral['Name'] = mineral['Species']
-            if 'Fluorescence' in mineral.keys():
-                mineral['Fluorescence (SW)'] = mineral['Fluorescence']
-                del mineral['Fluorescence']
+                    tkinter.messagebox.showerror("WARNING!", "Key %s is not recognised!" % (key))
             new_uid = self.get_id(mineral)
             if new_uid!=uid:
                 mineral['UID'] = new_uid
@@ -364,6 +356,7 @@ class MineralApp(tkinter.ttk.Frame):
             text.insert(tkinter.END, '%-20s : %s\n' % ('Size', str(mineral['Size'])))
             text.insert(tkinter.END, '%-20s : %s\n' % ('Weight', str(mineral['Weight'])))
             text.insert(tkinter.END, '%-20s : %s\n' % ('Price/Value', str(mineral['Price'])))
+            text.insert(tkinter.END, '%-20s : %s\n' % ('Collection', str(mineral['Collection'])))
 
             # Spacer
             text.insert(tkinter.END, '\n')
@@ -372,9 +365,12 @@ class MineralApp(tkinter.ttk.Frame):
             keys = ['Species', 'Chemical Formula', 'Class', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
                 'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence', 'Radioactivity']
             for key in keys:
-                text.insert(tkinter.END, '%-20s : ' % (key))
                 if mineral[key]:
                     vals = mineral[key].split(';;')
+                    vv = [ v for v in vals if v.lower().strip()!='no']
+                    if not any(vv):
+                        continue
+                    text.insert(tkinter.END, '%-20s : ' % (key))
                     for v in vals:
                         v = v.strip()
                         if key=='Chemical Formula':
@@ -385,18 +381,15 @@ class MineralApp(tkinter.ttk.Frame):
                             text.insert(tkinter.END, ' '*(20-len(v)))
                         else:
                             text.insert(tkinter.END, '%-20s' % (v))
-                text.insert(tkinter.END, '\n')
-
-            # Spacer
-            text.insert(tkinter.END, '\n')
+                    text.insert(tkinter.END, '\n')
 
             # Comments
-            text.insert(tkinter.END, '%-20s : %s\n' % ('Comments', str(mineral['Comments'])))
-
-            # Spacer
-            text.insert(tkinter.END, '\n')
+            if mineral['Comments']:
+                text.insert(tkinter.END, '\n')
+                text.insert(tkinter.END, '%-20s : %s\n' % ('Comments', str(mineral['Comments'])))
 
             # Images
+            text.insert(tkinter.END, '\n')
             self.load_images(mineral['UID'])
             if 'reference' in self.images.keys():
                 text.image_create(tkinter.END, image=self.images['reference'])
@@ -465,7 +458,7 @@ class MineralApp(tkinter.ttk.Frame):
                 if tmp:
                     value = tmp
             mineral[field] = value
-        if not mineral['Species']:
+        if not mineral['Name']:
             tkinter.messagebox.showerror("ERROR!", "You did not specify the mineral name! This is required!")
             return
         if not mineral['Class']:
@@ -476,7 +469,7 @@ class MineralApp(tkinter.ttk.Frame):
             mineral['Number'] = int(mineral['Number'])
             used_numbers = [ int(m['Number']) for m in self.minerals.values() ]
             if mineral['Number'] in used_numbers:
-                print('Error! Number %d already used! Generating a new one...' % mineral['Number'])
+                tkinter.messagebox.showerr('Error!', 'Number %d already used! Generating a new one...' % mineral['Number'])
                 mineral['Number'] = self.get_new_number()
         else:
             mineral['Number'] = self.get_new_number()

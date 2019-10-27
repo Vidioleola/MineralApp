@@ -24,6 +24,10 @@ description of each field:
    millimiters...); e.g. ``1 x 2 x 1.5 cm``.
  - Weight: the weight of the sample whatever units you prefer; e.g. ``10 g``.
  - Price: how much you paid for the sample, or how much it is worth.
+ - Collection: your minerals could be divided in different collections, like
+   fine crystals, fluorescent samples, gemstone, cabochon, etc. Use this field
+   to classify minerals by collection. Can also be used for the storage of the 
+   sample, like in which cabined, box of drawer the speciment is stored.
 
 While the above fields are general for the whole sample, the following ones are
 specific for each species present in the sample. To divide the information of 

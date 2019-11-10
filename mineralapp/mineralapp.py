@@ -11,6 +11,7 @@ import ttkthemes
 import webbrowser
 import functools
 import reportlab, reportlab.platypus, reportlab.lib.styles
+import urllib.request
 
 try:
     from .version import version
@@ -73,20 +74,24 @@ class MineralApp(tkinter.ttk.Frame):
         'Species', 'Class', 'Chemical Formula', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
         'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Tenebrescence',
         'Radioactivity', 'Comments' ]
-    minerals = {}
+    minerals = dict()
     selected = None
-    max_fig_size = 400.0
-    sort_by = 'Class'
-    image_path = None
-    uid_fmt = '%C_%S_%N'
+    settings = {
+        'uid_fmt'       : '%C_%S_%N',
+        'sort_by'       : 'Class',
+        'current_style' : 'plastik',
+        'max_fig_size'  : 400.0,
+        'image_path'    : None,
+        'check_version' : False,
+        'version'       : version
+        }
 
     def __init__(self, parent, *args, **kwargs):
         tkinter.ttk.Frame.__init__(self, parent, *args, **kwargs)
         self.winfo_toplevel().title("MineralApp " + version)
         self.set_icon()
         self.style = ttkthemes.ThemedStyle(self)
-        self.current_style = 'plastik'
-        self.style.theme_use(self.current_style)
+        self.style.theme_use(self.settings['current_style'])
         self.parent = parent
         self.parent.rowconfigure(0, weight=0)
         self.parent.rowconfigure(1, weight=1)
@@ -100,11 +105,27 @@ class MineralApp(tkinter.ttk.Frame):
         self.button_add_mineral = tkinter.ttk.Button(self.top_panel, text="Add new mineral", command=self.add_mineral).grid(row=0, column=3, padx=5, pady=5)
         self.button_modify = tkinter.ttk.Button(self.top_panel, text="Modify selected", command=self.modify_selected).grid(row=0, column=4, padx=5, pady=5)
         self.button_modify = tkinter.ttk.Button(self.top_panel, text="Export", command=self.export_report).grid(row=0, column=5, padx=5, pady=5)
-        self.button_settings = tkinter.ttk.Button(self.top_panel, text="Settings", command=self.settings).grid(row=0, column=6, padx=5, pady=5)
+        self.button_settings = tkinter.ttk.Button(self.top_panel, text="Settings", command=self.manage_settings).grid(row=0, column=6, padx=5, pady=5)
         self.button_help = tkinter.ttk.Button(self.top_panel, text="Help me!", command=self.helpme).grid(row=0, column=7, padx=5, pady=5)
         self.button_quit = tkinter.ttk.Button(self.top_panel, text="Quit", command=self.parent.destroy).grid(row=0, column=8, padx=5, pady=5)
         self.show_minerals()
         self.update_view()
+        self.check_new_version()
+
+    def check_new_version(self):
+        if not self.settings['check_version']:
+            return
+        try:
+            fp = urllib.request.urlopen("https://raw.githubusercontent.com/SimoneCnt/MineralApp/master/mineralapp/version.py")
+            retcode = fp.getcode()
+            if retcode!=200:
+                return
+            data = fp.read().decode()
+            newv = data.split('=')[1].replace('"','')
+            if float(newv)>float(version):
+                tkinter.messagebox.showinfo("Update available!", "You are using version %s, but version %s is available!" % (version, newv))
+        except:
+            pass
 
     def set_icon(self):
         dirs = [ os.getcwd(), os.path.dirname(__file__), '.', '..', 'icon', '../icon/' ]
@@ -115,7 +136,7 @@ class MineralApp(tkinter.ttk.Frame):
                 self.winfo_toplevel().tk.call('wm', 'iconphoto', self.winfo_toplevel()._w, img)
                 return
 
-    def settings(self):
+    def manage_settings(self):
         root = tkinter.Toplevel(self.parent)
         root.title('Settings')
         root.columnconfigure(0, weight=1)
@@ -126,26 +147,26 @@ class MineralApp(tkinter.ttk.Frame):
 
         # Sort option
         def set_sort(event):
-            self.sort_by = sort_combo.get()
+            self.settings['sort_by'] = sort_combo.get()
             self.update_view()
         sort_label = tkinter.ttk.Label(window, width=15, text='Sort by:', anchor='w')
         sort_label.grid(row=0, column=0, padx=5, pady=5)
         sort_values = ['Class', 'Number']
         sort_combo = tkinter.ttk.Combobox(window)
         sort_combo['values'] = sort_values
-        sort_combo.current(sort_values.index(self.sort_by))
+        sort_combo.current(sort_values.index(self.settings['sort_by']))
         sort_combo.grid(column=1, row=0)
         sort_combo.bind("<<ComboboxSelected>>", set_sort)
 
         # Windows style
         def set_style(event):
-            self.current_style = style_combo.get()
-            self.style.theme_use(self.current_style)
+            self.settings['current_style'] = style_combo.get()
+            self.style.theme_use(self.settings['current_style'])
         style_label = tkinter.ttk.Label(window, width=15, text='Style:', anchor='w')
         style_label.grid(row=1, column=0, padx=5, pady=5)
         style_combo = tkinter.ttk.Combobox(window)
         style_combo['values'] = self.style.theme_names()
-        style_combo.current(self.style.theme_names().index(self.current_style))
+        style_combo.current(self.style.theme_names().index(self.settings['current_style']))
         style_combo.grid(column=1, row=1)
         style_combo.bind("<<ComboboxSelected>>", set_style)
 
@@ -153,12 +174,12 @@ class MineralApp(tkinter.ttk.Frame):
         uid_label = tkinter.ttk.Label(window, width=15, text='Format UID:', anchor='w')
         uid_label.grid(row=2, column=0, padx=5, pady=5)
         uid_entry = tkinter.ttk.Entry(window, width=30)
-        uid_entry.insert(tkinter.END, self.uid_fmt)
+        uid_entry.insert(tkinter.END, self.settings['uid_fmt'])
         uid_entry.grid(row=2, column=1, padx=5, pady=5)
         
         # Save button
         def save():
-            self.uid_fmt = uid_entry.get()
+            self.settings['uid_fmt'] = uid_entry.get()
             self.check_db()
             self.update_view()
             root.destroy()
@@ -183,7 +204,7 @@ class MineralApp(tkinter.ttk.Frame):
 
     def update_view(self):
         self.listMinerals.delete(0, tkinter.END)
-        if self.sort_by=='Number':
+        if self.settings['sort_by']=='Number':
             sort_minerals = sorted(self.minerals.values(), key=lambda mineral: mineral['Number'])
         else:
             sort_minerals = sorted(self.minerals.values(), key=lambda mineral: mineral['UID'])
@@ -194,16 +215,23 @@ class MineralApp(tkinter.ttk.Frame):
         fname = tkinter.filedialog.askopenfilename(title="Select file")
         if fname:
             if not os.path.isfile(fname):
-                tkinter.messagebox.showerr("ERROR!", "<%s> does not exist. Doing nothing." % (fname))
+                tkinter.messagebox.showerror("ERROR!", "<%s> does not exist. Doing nothing." % (fname))
                 return
             with open(fname, 'r') as fp:
-                self.minerals = json.load(fp)
-            if not self.image_path:
-                self.image_path = os.path.join(os.path.dirname(fname), 'images')
-                if not os.path.isdir(self.image_path):
-                    self.image_path = None
-        self.check_db()
-        self.update_view()
+                data = json.load(fp)
+                if 'settings' not in data.keys():
+                    self.minerals = data
+                else:
+                    self.minerals = data['minerals']
+                    self.settings.update(data['settings'])
+            if not self.settings['image_path']:
+                self.settings['image_path'] = os.path.join(os.path.dirname(fname), 'images')
+                if not os.path.isdir(self.settings['image_path']):
+                    self.settings['image_path'] = None
+            self.style.theme_use(self.settings['current_style'])
+            self.check_new_version()
+            self.check_db()
+            self.update_view()
 
     def get_new_number(self):
         return max([0]+[int(m['Number']) for m in self.minerals.values()])+1
@@ -212,7 +240,7 @@ class MineralApp(tkinter.ttk.Frame):
         # %S -> Species
         # %C -> Class
         # %N -> Number
-        fmt = self.uid_fmt
+        fmt = self.settings['uid_fmt']
         name = re.sub('[^a-zA-Z0-9 ]', '', m['Name']).strip()
         klass = m['Class'].split(';;')[0].strip()
         number = '%d' % int(m['Number'])
@@ -254,21 +282,24 @@ class MineralApp(tkinter.ttk.Frame):
     def save_to_file(self):
         fname = tkinter.filedialog.asksaveasfilename(title="Select file", initialfile='minerals.json')
         if fname:
+            tosave = {'settings': self.settings, 'minerals': self.minerals}
             with open(fname, 'w') as fp:
-                json.dump(self.minerals, fp, indent=4, sort_keys=True)
+                json.dump(tosave, fp, indent=4, sort_keys=True)
 
     def load_images(self, uid):
         self.images = {}
-        if not self.image_path:
+        if not self.settings['image_path']:
             return
-        file_list = os.listdir(self.image_path)
+        if not os.path.isdir(self.settings['image_path']):
+            return
+        file_list = os.listdir(self.settings['image_path'])
         for fname in file_list:
             basename, extension = os.path.splitext(fname)
             image_uid = '_'.join(basename.split('_')[0:3])
             if image_uid==uid:
-                image_file = PIL.Image.open(os.path.join(self.image_path, fname))
+                image_file = PIL.Image.open(os.path.join(self.settings['image_path'], fname))
                 width, height = image_file.size
-                scale_factor = self.max_fig_size/max(width, height)
+                scale_factor = self.settings['max_fig_size']/max(width, height)
                 image_scaled = image_file.resize((int(width*scale_factor), int(height*scale_factor)), PIL.Image.ANTIALIAS)
                 image_render = PIL.ImageTk.PhotoImage(image_scaled)
                 desc = fname.replace(uid, '')
@@ -469,7 +500,7 @@ class MineralApp(tkinter.ttk.Frame):
             mineral['Number'] = int(mineral['Number'])
             used_numbers = [ int(m['Number']) for m in self.minerals.values() ]
             if mineral['Number'] in used_numbers:
-                tkinter.messagebox.showerr('Error!', 'Number %d already used! Generating a new one...' % mineral['Number'])
+                tkinter.messagebox.showerror('Error!', 'Number %d already used! Generating a new one...' % mineral['Number'])
                 mineral['Number'] = self.get_new_number()
         else:
             mineral['Number'] = self.get_new_number()
@@ -598,17 +629,17 @@ class MineralApp(tkinter.ttk.Frame):
         return story
 
     def _report_insert_images(self, uid, max_fig_size=5*reportlab.lib.units.cm, scale_quality=2.0):
-        if not self.image_path:
+        if not self.settings['image_path']:
             return list()
         story = list()
-        file_list = os.listdir(self.image_path)
+        file_list = os.listdir(self.settings['image_path'])
         images = list()
         for fname in file_list:
             basename, extension = os.path.splitext(fname)
             image_uid = '_'.join(basename.split('_')[0:3])
             if image_uid==uid:
                 # Create image with PIL and resize it
-                image_file = PIL.Image.open(os.path.join(self.image_path, fname))
+                image_file = PIL.Image.open(os.path.join(self.settings['image_path'], fname))
                 width, height = image_file.size
                 scale_factor = scale_quality*max_fig_size/max(width, height)
                 image_scaled = image_file.resize((int(width*scale_factor), int(height*scale_factor)), PIL.Image.ANTIALIAS)

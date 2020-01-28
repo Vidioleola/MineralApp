@@ -12,6 +12,7 @@ import webbrowser
 import functools
 import reportlab, reportlab.platypus, reportlab.lib.styles
 import urllib.request
+import sqlite3
 
 try:
     from .version import version
@@ -99,15 +100,16 @@ class MineralApp(tkinter.ttk.Frame):
         self.top_panel = tkinter.ttk.Frame(self.parent)
         self.top_panel.grid(row=0, column=0, padx=0, pady=0, sticky='news')
         self.top_panel.columnconfigure(0, weight=1)
-        self.top_panel.columnconfigure(8, weight=1)
+        self.top_panel.columnconfigure(9, weight=1)
         self.button_load = tkinter.ttk.Button(self.top_panel, text="Load database", command=self.read_from_file).grid(row=0, column=1, padx=5, pady=5)
         self.button_save = tkinter.ttk.Button(self.top_panel, text="Save database", command=self.save_to_file).grid(row=0, column=2, padx=5, pady=5)
         self.button_add_mineral = tkinter.ttk.Button(self.top_panel, text="Add new mineral", command=self.add_mineral).grid(row=0, column=3, padx=5, pady=5)
         self.button_modify = tkinter.ttk.Button(self.top_panel, text="Modify selected", command=self.modify_selected).grid(row=0, column=4, padx=5, pady=5)
         self.button_modify = tkinter.ttk.Button(self.top_panel, text="Export", command=self.export_report).grid(row=0, column=5, padx=5, pady=5)
-        self.button_settings = tkinter.ttk.Button(self.top_panel, text="Settings", command=self.manage_settings).grid(row=0, column=6, padx=5, pady=5)
-        self.button_help = tkinter.ttk.Button(self.top_panel, text="Help me!", command=self.helpme).grid(row=0, column=7, padx=5, pady=5)
-        self.button_quit = tkinter.ttk.Button(self.top_panel, text="Quit", command=self.parent.destroy).grid(row=0, column=8, padx=5, pady=5)
+        self.button_modify = tkinter.ttk.Button(self.top_panel, text="Export v2", command=self.export_v2).grid(row=0, column=6, padx=5, pady=5)
+        self.button_settings = tkinter.ttk.Button(self.top_panel, text="Settings", command=self.manage_settings).grid(row=0, column=7, padx=5, pady=5)
+        self.button_help = tkinter.ttk.Button(self.top_panel, text="Help me!", command=self.helpme).grid(row=0, column=8, padx=5, pady=5)
+        self.button_quit = tkinter.ttk.Button(self.top_panel, text="Quit", command=self.parent.destroy).grid(row=0, column=9, padx=5, pady=5)
         self.show_minerals()
         self.update_view()
         self.check_new_version()
@@ -292,12 +294,16 @@ class MineralApp(tkinter.ttk.Frame):
             return
         if not os.path.isdir(self.settings['image_path']):
             return
-        file_list = os.listdir(self.settings['image_path'])
+        minid = str(self.minerals[uid]['Number'])
+        basedir = os.path.join(self.settings['image_path'], minid)
+        if not os.path.isdir(basedir):
+            return
+        file_list = os.listdir(basedir)
         for fname in file_list:
             basename, extension = os.path.splitext(fname)
             image_uid = '_'.join(basename.split('_')[0:3])
             if image_uid==uid:
-                image_file = PIL.Image.open(os.path.join(self.settings['image_path'], fname))
+                image_file = PIL.Image.open(os.path.join(basedir, fname))
                 width, height = image_file.size
                 scale_factor = self.settings['max_fig_size']/max(width, height)
                 image_scaled = image_file.resize((int(width*scale_factor), int(height*scale_factor)), PIL.Image.ANTIALIAS)
@@ -427,7 +433,7 @@ class MineralApp(tkinter.ttk.Frame):
                 text.tag_add('center', 'current linestart', 'current lineend')
                 text.insert(tkinter.END, '\n\n')
             for desc, img in self.images.items():
-                if desc is not 'reference':
+                if desc!='reference':
                     if desc=='UVSW':
                         text.insert(tkinter.END, 'Short-Wave UV\n')
                     elif desc=='UVLW':
@@ -683,6 +689,50 @@ class MineralApp(tkinter.ttk.Frame):
                 story += self._report_write_data(mineral)
                 story += self._report_insert_images(mineral['UID'])
             doc.build(story)
+
+    def export_v2(self):
+        fname = tkinter.filedialog.asksaveasfilename(title="Select file", initialfile='minerals.sqlite3')
+        if not fname:
+            return
+        if os.path.isfile(fname):
+            os.remove(fname)
+        conn = sqlite3.connect(fname)
+        c = conn.cursor()
+        c.execute("CREATE TABLE MINERALS (MINID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, LOCALITY TEXT, LOCID_MNDAT TEXT, SIZE TEXT, WEIGHT TEXT, ACQUISITION TEXT, COLLECTION TEXT, VALUE TEXT, S1_SPECIES TEXT, S1_CLASS TEXT, S1_CHEMF TEXT, S1_COLOR TEXT, S1_FLSW TEXT, S1_FLMW TEXT, S1_FLLW TEXT, S1_FL405 TEXT, S1_PHSW TEXT, S1_PHMW TEXT, S1_PHLW TEXT, S1_PH405 TEXT, S1_TENEBR TEXT, S2_SPECIES TEXT, S2_CLASS TEXT, S2_CHEMF TEXT, S2_COLOR TEXT, S2_FLSW TEXT, S2_FLMW TEXT, S2_FLLW TEXT, S2_FL405 TEXT, S2_PHSW TEXT, S2_PHMW TEXT, S2_PHLW TEXT, S2_PH405 TEXT, S2_TENEBR TEXT, S3_SPECIES TEXT, S3_CLASS TEXT, S3_CHEMF TEXT, S3_COLOR TEXT, S3_FLSW TEXT, S3_FLMW TEXT, S3_FLLW TEXT, S3_FL405 TEXT, S3_PHSW TEXT, S3_PHMW TEXT, S3_PHLW TEXT, S3_PH405 TEXT, S3_TENEBR TEXT, S4_SPECIES TEXT, S4_CLASS TEXT, S4_CHEMF TEXT, S4_COLOR TEXT, S4_FLSW TEXT, S4_FLMW TEXT, S4_FLLW TEXT, S4_FL405 TEXT, S4_PHSW TEXT, S4_PHMW TEXT, S4_PHLW TEXT, S4_PH405 TEXT, S4_TENEBR TEXT, RADIOACT TEXT, COMMENTS TEXT );")
+        c.execute("CREATE TABLE SETTINGS (VERSION_MAJOR INT, VERSION_MINOR INT)")
+        c.execute("INSERT INTO SETTINGS (VERSION_MAJOR, VERSION_MINOR) VALUES (2, 0);")
+        mindata = list()
+        regex = re.compile('\[\[MINDAT:(\w{3}-\d*)\]\]')
+        for mine in self.minerals.values():
+            locality = mine['Locality']
+            locid = ''
+            if locality:
+                for res in regex.findall(locality):
+                    locality = locality.replace('[[MINDAT:%s]]' % (res), '')
+                    locid = res
+                locality = locality.strip()
+            size = mine['Size']
+            data = (int(mine['Number']), mine['Name'], locality, locid, mine['Size'], mine['Weight'], mine['Acquisition'], mine['Collection'], mine['Price'])
+            fields = [ 'Species', 'Class', 'Chemical Formula', 'Color', 'Fluorescence (SW)', 'Fluorescence (MW)',
+                        'Fluorescence (LW)', 'Fluorescence (405nm)', 'Phosphorescence', 'Phosphorescence', 'Phosphorescence', 'Phosphorescence', 'Tenebrescence' ]
+            for i in range(4):
+                for f in fields:
+                    toadd = ''
+                    if mine[f]:
+                        dd = [d.strip() for d in mine[f].split(';;') ]
+                        if len(dd)>i:
+                            toadd = dd[i]
+                    data = data + (toadd, )
+            data = data + (mine['Radioactivity'], mine['Comments'])
+            if len(data)!=63:
+                print(data)
+                tkinter.messagebox.showerror("ERROR!", "Key %s parsed in %d values instead of 64!" % (mine['UID'], len(data)))
+                conn.close()
+            mindata.append(data)
+        c.executemany("INSERT INTO MINERALS (MINID, NAME, LOCALITY, LOCID_MNDAT, SIZE, WEIGHT, ACQUISITION, COLLECTION, VALUE, S1_SPECIES, S1_CLASS, S1_CHEMF, S1_COLOR, S1_FLSW, S1_FLMW, S1_FLLW, S1_FL405, S1_PHSW, S1_PHMW, S1_PHLW, S1_PH405, S1_TENEBR, S2_SPECIES, S2_CLASS, S2_CHEMF, S2_COLOR, S2_FLSW, S2_FLMW, S2_FLLW, S2_FL405, S2_PHSW, S2_PHMW, S2_PHLW, S2_PH405, S2_TENEBR, S3_SPECIES, S3_CLASS, S3_CHEMF, S3_COLOR, S3_FLSW, S3_FLMW, S3_FLLW, S3_FL405, S3_PHSW, S3_PHMW, S3_PHLW, S3_PH405, S3_TENEBR, S4_SPECIES, S4_CLASS, S4_CHEMF, S4_COLOR, S4_FLSW, S4_FLMW, S4_FLLW, S4_FL405, S4_PHSW, S4_PHMW, S4_PHLW, S4_PH405, S4_TENEBR, RADIOACT, COMMENTS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);", mindata)
+        conn.commit()
+        conn.close()
+
 
 
 def main_gui():

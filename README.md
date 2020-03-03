@@ -7,13 +7,15 @@ MineralApp is a small and simple application to create a database of minerals.
 You can add your mineral collection, storing any details you are interested in,
 helping you (hopefully...) to keep your mineral collection organized.
 
+Please, look at mineralapp.pdf for install instructions and how to use manual.
+
 
 License and Copyright
 ---------------------
 
 This code and manual has been written by Simone Conti.
 
-&copy; 2019 Simone Conti
+&copy; 2019-2020 Simone Conti
 
 MineralApp is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software 

@@ -14,7 +14,6 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
-#include "version.h"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_NewMineral,       MainFrame::OnNewMineral)
@@ -153,11 +152,15 @@ void MainFrame::OnExit(wxCommandEvent& event) {
 }
 
 void MainFrame::OnAbout(wxCommandEvent& event) {
-    wxMessageBox("Mineral database application", "About MineralApp", wxOK | wxICON_INFORMATION );
+    const char *msg =
+        "MineralApp is a small and simple application to create a database of "
+        "your minerals. You can add your mineral collection, storing any details "
+        "you are interested in, helping you (hopefully...) to keep your mineral "
+        "collection well organized!";
+    wxMessageBox(msg, "MineralApp v" VERSION, wxOK | wxICON_INFORMATION);
 }
 
 void MainFrame::OnURL(wxTextUrlEvent& event) {
-    //wxMessageBox(event.GetString());
     wxLaunchDefaultBrowser(event.GetString());
     mineral_view->SetCaretPosition(0);
     mineral_view->SetDefaultStyleToCursorStyle();

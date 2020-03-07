@@ -13,6 +13,7 @@
 # will install in /tmp/stage/usr/
 PREFIX = /usr
 
+
 # Set compiler flags
 CXX      = g++
 CXXFLAGS = --std=c++17 -Wall -O2
@@ -31,14 +32,18 @@ LDFLAGS  += /usr/local/Cellar/sqlite/3.31.1/lib/libsqlite3.a
 all: MineralApp.app
 endif
 
+# Set version
+include version.in
+CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MINOR)"' -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION='"$(VERSION)"'
+
 # Compile source code, make mineralapp executable
 mineralapp: src/app.o src/addmodframe.o src/mainframe.o
 	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o -o mineralapp
-src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h src/version.h
+src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
-src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h src/version.h
+src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/mainframe.cpp -o src/mainframe.o $(CXXFLAGS)
-src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h src/version.h
+src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/addmodframe.cpp -o src/addmodframe.o $(CXXFLAGS)
 
 ### Linux specific install instructions
@@ -73,6 +78,7 @@ MineralApp.app: mineralapp Info.plist mineralapp.icns
 	mkdir -p MineralApp.app/Contents/MacOS
 	mkdir -p MineralApp.app/Contents/Resources
 	cp Info.plist MineralApp.app/Contents/Info.plist
+	sed -i -e 's/VERSION/$(VERSION)/g' MineralApp.app/Contents/Info.plist
 	/bin/echo "APPL????" >MineralApp.app/Contents/PkgInfo
 	cp mineralapp MineralApp.app/Contents/MacOS/mineralapp
 	cp mineralapp.icns MineralApp.app/Contents/Resources/

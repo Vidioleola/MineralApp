@@ -7,7 +7,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.simonecnt.mineralapp</string>
+	<string>com.3dz2.mineralapp</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -19,7 +19,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleVersion</key>
-	<string>2.0.0</string>
+	<string>VERSION</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright 2019-2020 Simone Conti</string>
 	<key>LSRequiresCarbon</key>

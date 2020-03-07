@@ -9,7 +9,6 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
-#include "version.h"
 
 class MineralApp: public wxApp {
     public:
@@ -19,8 +18,7 @@ class MineralApp: public wxApp {
 wxIMPLEMENT_APP(MineralApp);
 
 bool MineralApp::OnInit() {
-    MainFrame *frame = new MainFrame("MineralApp v." VERSION, wxDefaultPosition, wxSize(800,600) );
-    //frame->SetMinSize(wxSize(800, 600));
+    MainFrame *frame = new MainFrame("MineralApp v" VERSION, wxDefaultPosition, wxSize(800,600) );
     frame->Maximize(true);
     frame->Show(true);
     return true;

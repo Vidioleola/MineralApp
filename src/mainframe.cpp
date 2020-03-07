@@ -189,11 +189,12 @@ void MainFrame::OnModifyMineral(wxCommandEvent& event) {
         wxLogMessage("Please, select a mineral from the left panel.");
         return;
     }
-    std::string label = mineral_listbox->GetString(selected).ToStdString();
-    int ndx = label.rfind('[');
+    wxString label = mineral_listbox->GetString(selected);
+    int ndxi = label.rfind('[');
+    int ndxf = label.rfind(']');
     int minid;
     int ret;
-    ret = sscanf(label.c_str()+ndx, "[%d]", &minid);
+    ret = sscanf(label.substr(ndxi,ndxf).c_str(), "[%d]", &minid);
     if (ret!=1) {
         wxLogMessage("Please, select a mineral from the left panel.");
         return;

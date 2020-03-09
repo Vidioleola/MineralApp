@@ -1,5 +1,4 @@
 
-#include <filesystem>
 #include <vector>
 #include <algorithm>
 #include <regex>
@@ -11,6 +10,22 @@
 #include <wx/richtext/richtextctrl.h>
 
 #include <sqlite3.h> 
+
+#if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
+  #if __has_include(<filesystem>)
+    #define GHC_USE_STD_FS
+  #endif
+#endif
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
+  #undef GHC_USE_STD_FS
+#endif
+#ifdef GHC_USE_STD_FS
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#else
+  #include "filesystem.hpp"
+  namespace fs = ghc::filesystem;
+#endif
 
 #include "mainframe.h"
 #include "addmodframe.h"
@@ -111,7 +126,7 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     sqlite3_backup_finish(bkp);
     sqlite3_close(db_tmp);
 
-    db_file_path = std::filesystem::path(fname);
+    db_file_path = fs::path(fname);
 
     /* Populate the mineral listbox */
     populate_listbox();
@@ -426,11 +441,11 @@ void MainFrame::ReadData(std::string uid) {
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
 
-    std::filesystem::path basepath = std::filesystem::path(db_file_path).remove_filename() / "data" / uid;
-    if (!std::filesystem::is_directory(basepath)) {
+    fs::path basepath = fs::path(db_file_path).remove_filename() / "data" / uid;
+    if (!fs::is_directory(basepath)) {
         std::string prefix = uid + " ";
-        basepath = std::filesystem::path();
-        for (const auto & entry : std::filesystem::directory_iterator(std::filesystem::path(db_file_path).remove_filename() / "data")) {
+        basepath = fs::path();
+        for (const auto & entry : fs::directory_iterator(fs::path(db_file_path).remove_filename() / "data")) {
             if (entry.is_directory() && strncmp(entry.path().filename().c_str(), prefix.c_str(), prefix.size())==0) {
                 basepath = entry.path();
                 break;
@@ -449,8 +464,8 @@ void MainFrame::ReadData(std::string uid) {
     r->Newline();
     r->Newline();
 
-    std::vector<std::filesystem::directory_entry> files;
-    std::copy(std::filesystem::directory_iterator(basepath), std::filesystem::directory_iterator(), std::back_inserter(files));
+    std::vector<fs::directory_entry> files;
+    std::copy(fs::directory_iterator(basepath), fs::directory_iterator(), std::back_inserter(files));
     std::sort(files.begin(), files.end());
 
     for (const auto & entry : files) {

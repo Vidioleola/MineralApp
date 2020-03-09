@@ -27,6 +27,7 @@ all: mineralapp mineralapp-48x48.png mineralapp-512x512.png
 endif
 ifeq ($(UNAME), Darwin)
 CXXFLAGS += `wx-config --cxxflags --static`
+CXXFLAGS += -mmacosx-version-min=10.12
 LDFLAGS  += `wx-config --cxxflags --libs std,richtext --static`
 LDFLAGS  += /usr/local/Cellar/sqlite/3.31.1/lib/libsqlite3.a
 all: MineralApp.app

@@ -47,6 +47,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
         : wxFrame(NULL, wxID_ANY, title, pos, size) {
     /* Initialize DB */
     db = NULL;
+    db_file_path = "";
     //wxInitAllImageHandlers();
     wxImage::AddHandler(new wxPNGHandler);
     wxImage::AddHandler(new wxJPEGHandler);
@@ -437,11 +438,18 @@ void MainFrame::write_link_row(sqlite3_stmt *stmt) {
 
 void MainFrame::ReadData(std::string uid) {
 
+    if (db_file_path.empty()) return;
+
     wxRichTextAttr urlStyle;
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
 
-    fs::path basepath = fs::path(db_file_path).remove_filename() / "data" / uid;
+    fs::path basepath;
+
+    basepath = fs::path(db_file_path).remove_filename() / "data";
+    if (!fs::is_directory(basepath)) return;
+
+    basepath = fs::path(db_file_path).remove_filename() / "data" / uid;
     if (!fs::is_directory(basepath)) {
         std::string prefix = uid + " ";
         basepath = fs::path();

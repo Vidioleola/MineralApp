@@ -29,6 +29,7 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
+#include "utils.h"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_NewMineral,       MainFrame::OnNewMineral)
@@ -415,21 +416,33 @@ void MainFrame::write_link_row(sqlite3_stmt *stmt) {
     int l2 = strlen(s2);
     int l3 = strlen(s3);
     int l4 = strlen(s4);
+    std::string s1p = url_encode(s1.ToStdString());
+    std::string s2p = url_encode(s2.ToStdString());
+    std::string s3p = url_encode(s3.ToStdString());
+    std::string s4p = url_encode(s4.ToStdString());
     if (l1+l2+l3+l4>0) {
         r->BeginBold(); r->WriteText("                 "); r->EndBold();
-        r->BeginStyle(urlStyle); r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s1);r->WriteText("MINDAT");r->EndURL();r->EndStyle();
-        r->WriteText(std::string(guess_column_width(stmt, 0)-6, ' '));
+        r->BeginStyle(urlStyle); r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s1p);r->WriteText("M");r->EndURL();r->EndStyle();
+        r->WriteText(" ");
+        r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s1p);r->WriteText("R");r->EndURL();r->EndStyle();
+        r->WriteText(std::string(guess_column_width(stmt, 0)-3, ' '));
         if (l2+l3+l4>0) {
-            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s2);r->WriteText("MINDAT");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 1)-6, ' '));
+            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s2p);r->WriteText("M");r->EndURL();r->EndStyle();
+            r->WriteText(" ");
+            r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s2p);r->WriteText("R");r->EndURL();r->EndStyle();
+            r->WriteText(std::string(guess_column_width(stmt, 1)-3, ' '));
         }
         if (l3+l4>0) {
-            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s3);r->WriteText("MINDAT");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 2)-6, ' '));
+            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s3p);r->WriteText("M");r->EndURL();r->EndStyle();
+            r->WriteText(" ");
+            r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s3p);r->WriteText("R");r->EndURL();r->EndStyle();
+            r->WriteText(std::string(guess_column_width(stmt, 2)-3, ' '));
         }
         if (l4>0) {
-            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s4);r->WriteText("MINDAT");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 3)-6, ' '));
+            r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s4p);r->WriteText("M");r->EndURL();r->EndStyle();
+            r->WriteText(" ");
+            r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s4p);r->WriteText("R");r->EndURL();r->EndStyle();
+            r->WriteText(std::string(guess_column_width(stmt, 3)-3, ' '));
         }
         r->Newline();
     }
@@ -493,8 +506,7 @@ void MainFrame::ReadData(std::string uid) {
             r->WriteText(wxString("file: ")+wxString(entry.path().filename()));
         }
         r->WriteText("    ");
-        std::string temppath = std::regex_replace(entry.path().string(), std::regex(" "), "%20");
-        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+wxString(temppath));r->WriteText(wxString("Open original"));r->EndURL();r->EndStyle();
+        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(entry.path()));r->WriteText(wxString("Open original"));r->EndURL();r->EndStyle();
         r->Newline();
         r->Newline();
     }

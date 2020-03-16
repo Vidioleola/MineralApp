@@ -38,14 +38,16 @@ include version.in
 CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MINOR)"' -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION='"$(VERSION)"'
 
 # Compile source code, make mineralapp executable
-mineralapp: src/app.o src/addmodframe.o src/mainframe.o
-	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o -o mineralapp
+mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/utils.o
+	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o src/utils.o -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
 src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/mainframe.cpp -o src/mainframe.o $(CXXFLAGS)
-src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h
+src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h src/utils.h
 	$(CXX) -c src/addmodframe.cpp -o src/addmodframe.o $(CXXFLAGS)
+src/utils.o: src/utils.cpp src/utils.h
+	$(CXX) -c src/utils.cpp -o src/utils.o $(CXXFLAGS)
 
 ### Linux specific install instructions
 ifeq ($(UNAME), Linux)
@@ -120,7 +122,7 @@ endif
 # Clean build
 .PHONY: clean
 clean:
-	rm -rf mineralapp MineralApp.app src/app.o src/addmodframe.o src/mainframe.o
+	rm -rf mineralapp MineralApp.app src/app.o src/addmodframe.o src/mainframe.o src/utils.o
 	rm -f mineralapp-512x512.png mineralapp-48x48.png mineralapp.icns
 	rm -rf dist/
 

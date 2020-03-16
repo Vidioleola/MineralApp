@@ -2,6 +2,7 @@ mineralapp
 src/addmodframe.o
 src/app.o
 src/mainframe.o
+src/utils.o
 .DS_Store
 MineralApp.app/
 mineralapp-512x512.png

@@ -195,57 +195,74 @@ void MainFrame::OnNewMineral(wxCommandEvent& event) {
     frame->Show();
 }
 
-void MainFrame::OnModifyMineral(wxCommandEvent& event) {
-    if (!db) {
-        db_initialize();
-    }
-    if (!db) {
-        wxMessageBox("DB initialization failed! Sorry, try to close everything and retry...");
-        return;
-    }
-    /* Get the id of the selected mineral */
+int MainFrame::get_minid_from_listbox() {
+    int minid;
     int selected = mineral_listbox->GetSelection();
     if (selected==wxNOT_FOUND) {
         wxLogMessage("Please, select a mineral from the left panel.");
-        return;
+        return -1;
     }
     wxString label = mineral_listbox->GetString(selected);
     int ndxi = label.rfind('[');
     int ndxf = label.rfind(']');
-    int minid;
-    int ret;
-    ret = sscanf(label.substr(ndxi,ndxf).c_str(), "[%d]", &minid);
+    int ret = sscanf(label.substr(ndxi,ndxf).c_str(), "[%d]", &minid);
     if (ret!=1) {
         wxLogMessage("Please, select a mineral from the left panel.");
-        return;
+        return -1;
     }
-    /* Open form */
+    return minid;
+}
+
+void MainFrame::OnModifyMineral(wxCommandEvent& event) {
+    int minid = get_minid_from_listbox();
+    if (minid<0) return;
     AddModFrame *frame = new AddModFrame(this, "Add new mineral", db, minid);
     frame->Show();
 }
 
 void MainFrame::OnDuplicateMineral(wxCommandEvent& event) {
-    wxLogMessage("Duplicate mineral not implemented yet!");
+    int minid = get_minid_from_listbox();
+    if (minid<0) return;
+    std::string  query = " \
+        CREATE TEMPORARY TABLE temp_table as SELECT * FROM  MINERALS WHERE minid=" + std::to_string(minid) + "; \
+        UPDATE temp_table SET MINID=NULL; \
+        INSERT INTO MINERALS SELECT * FROM temp_table; \
+        DROP TABLE temp_table; \
+    ";
+    int ret;
+    char *errmsg;
+    ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg);
+    if (ret!=SQLITE_OK) {
+        wxLogMessage("SQL error: %s", errmsg);
+        sqlite3_free(errmsg);
+        return;
+    }
+    populate_listbox();
+    wxLogMessage("Mineral duplicated!");
 }
 
 void MainFrame::OnDeleteMineral(wxCommandEvent& event) {
-    wxLogMessage("Delete mineral not implemented yet!");
+    int minid = get_minid_from_listbox();
+    if (minid<0) return;
+    std::string msg = "You are going to delete mineral ID " + std::to_string(minid) +  ". This operation cannot be undone.";
+    wxMessageDialog dial(this, msg, "Are you sure you want to delete this mineral?", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
+    if (dial.ShowModal() != wxID_YES) return;
+    std::string query = "DELETE FROM MINERALS WHERE minid=" + std::to_string(minid);
+    int ret;
+    char *errmsg;
+    ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg);
+    if (ret!=SQLITE_OK) {
+        wxLogMessage("SQL error: %s", errmsg);
+        sqlite3_free(errmsg);
+        return;
+    }
+    populate_listbox();
+    mineral_view->Clear();
 }
 
 void MainFrame::OnSelectMineral(wxCommandEvent& event) {
-    int selected = mineral_listbox->GetSelection();
-    if (selected==wxNOT_FOUND) {
-        return;
-    }
-    wxString label = mineral_listbox->GetString(selected);
-    int ndx = label.rfind('[');
-    int minid;
-    int ret;
-    ret = sscanf(std::string(label.ToAscii()).c_str()+ndx, "[%d]", &minid);
-    if (ret!=1) {
-        wxLogMessage("Impossible to parse id :(");
-        return;
-    }
+    int minid = get_minid_from_listbox();
+    if (minid<0) return;
     draw_mineral_view(minid);
     return;
 }
@@ -358,6 +375,8 @@ void MainFrame::draw_mineral_view(int minid) {
     ReadData(uid.ToStdString());
 
     r->EndFont();
+
+    sqlite3_finalize(stmt);
 
     return;
 }

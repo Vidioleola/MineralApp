@@ -504,6 +504,8 @@ void AddModFrame::PopulateForm(int uid) {
 
     entry_comments->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
 
+    sqlite3_finalize(stmt);
+
     return;
 }
 

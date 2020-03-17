@@ -22,6 +22,7 @@ class MainFrame: public wxFrame {
         void write_table_row(sqlite3_stmt *stmt, wxString name, int ndx);
         void write_link_row(sqlite3_stmt *stmt);
         void ReadData(std::string uid);
+        int get_minid_from_listbox();
         std::string db_file_path;
         wxDECLARE_EVENT_TABLE();
     };

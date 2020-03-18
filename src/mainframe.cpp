@@ -509,6 +509,7 @@ void MainFrame::ReadData(std::string uid) {
     std::sort(files.begin(), files.end());
 
     for (const auto & entry : files) {
+        if (entry.path().filename().string().at(0) == '.') continue;
         std::string ext = std::string(entry.path().extension().c_str());
         if (std::find(formats.begin(), formats.end(), ext) != formats.end()) {
             wxImage image = wxImage(wxString(entry.path().string()));

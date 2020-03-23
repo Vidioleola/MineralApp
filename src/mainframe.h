@@ -14,6 +14,7 @@ class MainFrame: public wxFrame {
         void OnSelectMineral(wxCommandEvent& event);
         void OnOpen(wxCommandEvent& event);
         void OnSave(wxCommandEvent& event);
+        void export_csv(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void OnURL(wxTextUrlEvent& event);
@@ -33,5 +34,6 @@ enum {
     ID_DuplicateMineral,
     ID_DeleteMineral,
     ID_SelectMineral,
+    ID_ExportCSV
 };
 

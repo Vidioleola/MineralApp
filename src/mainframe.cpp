@@ -1,7 +1,6 @@
 
 #include <vector>
 #include <algorithm>
-#include <regex>
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -32,6 +31,7 @@
 #include "utils.h"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
+    EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)
     EVT_MENU(ID_NewMineral,       MainFrame::OnNewMineral)
     EVT_MENU(ID_ModifyMineral,    MainFrame::OnModifyMineral)
     EVT_MENU(ID_DuplicateMineral, MainFrame::OnDuplicateMineral)
@@ -49,7 +49,6 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     /* Initialize DB */
     db = NULL;
     db_file_path = "";
-    //wxInitAllImageHandlers();
     wxImage::AddHandler(new wxPNGHandler);
     wxImage::AddHandler(new wxJPEGHandler);
     wxImage::AddHandler(new wxGIFHandler);
@@ -58,7 +57,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxMenu *menuFile = new wxMenu;
     menuFile->Append(wxID_OPEN);
     menuFile->Append(wxID_SAVE);
-    //menuFile->Append(wxID_COPY);
+    menuFile->Append(ID_ExportCSV, "&Export CSV", "Export mineral database as CSV file");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
     wxMenu *menuMineral = new wxMenu;
@@ -589,5 +588,45 @@ void MainFrame::populate_listbox() {
     }
     sqlite3_finalize(stmt);
     return;
+}
+
+
+void MainFrame::export_csv(wxCommandEvent& event) {
+    if (!db) {
+        wxLogMessage("Nothing to save!");
+        return;
+    }
+    wxFileDialog saveFileDialog(this, "Export CSV file", wxEmptyString, "minerals.csv",  "CSV files (*.csv)|*.csv", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+    if (saveFileDialog.ShowModal() == wxID_CANCEL) {
+        return;
+    }
+    std::ofstream csvfile;
+    csvfile.open(saveFileDialog.GetPath());
+    int ret, i;
+    int F_NUMBER=127;
+    sqlite3_stmt *stmt;
+    ret = sqlite3_prepare_v2(db, "SELECT * FROM MINERALS", -1, &stmt, NULL);
+    if (ret!=SQLITE_OK) {
+        wxLogMessage("sql error prepare: %s", sqlite3_errmsg(db));
+        return;
+    }
+    csvfile << "MINID,NAME,LOCALITY,LOCID_MNDAT,SIZE,WEIGHT,ACQUISITION,COLLECTION,VALUE,";
+    csvfile << "S1_SPECIES,S1_CLASS,S1_CHEMF,S1_COLOR,S1_FLSW,S1_FLMW,S1_FLLW,S1_FL405,S1_PHSW,S1_PHMW,S1_PHLW,S1_PH405,S1_TENEBR,";
+    csvfile << "S2_SPECIES,S2_CLASS,S2_CHEMF,S2_COLOR,S2_FLSW,S2_FLMW,S2_FLLW,S2_FL405,S2_PHSW,S2_PHMW,S2_PHLW,S2_PH405,S2_TENEBR,";
+    csvfile << "S3_SPECIES,S3_CLASS,S3_CHEMF,S3_COLOR,S3_FLSW,S3_FLMW,S3_FLLW,S3_FL405,S3_PHSW,S3_PHMW,S3_PHLW,S3_PH405,S3_TENEBR,";
+    csvfile << "S4_SPECIES,S4_CLASS,S4_CHEMF,S4_COLOR,S4_FLSW,S4_FLMW,S4_FLLW,S4_FL405,S4_PHSW,S4_PHMW,S4_PHLW,S4_PH405,S4_TENEBR,";
+    csvfile << "RADIOACT,COMMENTS" << std::endl;
+    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
+        for (i=0; i<F_NUMBER; i++) {
+            csvfile << "\"" << str_escape(wxString(sqlite3_column_text(stmt, i), wxConvUTF8).ToStdString(), '"', '"') << "\"";
+            if (i+1!=F_NUMBER) csvfile << ",";
+        }
+        csvfile << std::endl;
+    }
+    if (ret!=SQLITE_DONE) {
+        wxLogMessage("sql error done: ", sqlite3_errmsg(db));
+    }
+    sqlite3_finalize(stmt);
+    csvfile.close();
 }
 

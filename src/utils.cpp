@@ -29,3 +29,17 @@ std::string url_encode(const std::string &value) {
     return escaped.str();
 }
 
+/*
+    Escape all occurences of to_escape with escape_with.
+*/
+std::string str_escape(const std::string &value, char to_escape, char escape_with) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+        if (c==to_escape) escaped << escape_with;
+        escaped << c;
+    }
+    return escaped.str();
+}
+

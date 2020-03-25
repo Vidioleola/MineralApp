@@ -1,4 +1,21 @@
 
+#if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
+  #if __has_include(<filesystem>)
+    #define GHC_USE_STD_FS
+  #endif
+#endif
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
+  #undef GHC_USE_STD_FS
+#endif
+#ifdef GHC_USE_STD_FS
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#else
+  #include "filesystem.hpp"
+  namespace fs = ghc::filesystem;
+#endif
+
+
 class MainFrame: public wxFrame {
     public:
         MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
@@ -14,17 +31,22 @@ class MainFrame: public wxFrame {
         void OnSelectMineral(wxCommandEvent& event);
         void OnOpen(wxCommandEvent& event);
         void OnSave(wxCommandEvent& event);
+        void OnClose(wxCommandEvent& event);
         void export_csv(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void OnURL(wxTextUrlEvent& event);
         sqlite3 *db;
         void db_initialize();
+        void open_dbfile(std::string);
         void write_table_row(sqlite3_stmt *stmt, wxString name, int ndx);
         void write_link_row(sqlite3_stmt *stmt);
         void ReadData(std::string uid);
         int get_minid_from_listbox();
         std::string db_file_path;
+        fs::path get_config_dirname();
+        void read_config();
+        void write_config();
         wxDECLARE_EVENT_TABLE();
     };
 

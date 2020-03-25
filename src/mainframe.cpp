@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <sstream>
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -9,22 +10,6 @@
 #include <wx/richtext/richtextctrl.h>
 
 #include <sqlite3.h> 
-
-#if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
-  #if __has_include(<filesystem>)
-    #define GHC_USE_STD_FS
-  #endif
-#endif
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
-  #undef GHC_USE_STD_FS
-#endif
-#ifdef GHC_USE_STD_FS
-  #include <filesystem>
-  namespace fs = std::filesystem;
-#else
-  #include "filesystem.hpp"
-  namespace fs = ghc::filesystem;
-#endif
 
 #include "mainframe.h"
 #include "addmodframe.h"
@@ -38,6 +23,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_DeleteMineral,    MainFrame::OnDeleteMineral)
     EVT_MENU(wxID_OPEN,  MainFrame::OnOpen)
     EVT_MENU(wxID_SAVE,  MainFrame::OnSave)
+    EVT_MENU(wxID_CLOSE, MainFrame::OnClose)
     EVT_MENU(wxID_EXIT,  MainFrame::OnExit)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_LISTBOX(ID_SelectMineral, MainFrame::OnSelectMineral)
@@ -57,6 +43,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxMenu *menuFile = new wxMenu;
     menuFile->Append(wxID_OPEN);
     menuFile->Append(wxID_SAVE);
+    menuFile->Append(wxID_CLOSE);
     menuFile->Append(ID_ExportCSV, "&Export CSV", "Export mineral database as CSV file");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
@@ -85,10 +72,11 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     hsizer->Add(mineral_view, 5, wxEXPAND | wxALL, 5);
     hsizer->SetSizeHints(this);
     SetSizerAndFit(hsizer);
+    /* Read config file */
+    read_config();
 }
 
 void MainFrame::OnOpen(wxCommandEvent& event) {
-    int ret;
     /* Check if some db is already opened and warn the user */
     if (db) {
         wxMessageDialog *dial = new wxMessageDialog(NULL, "You have already an open database. Do you want to discard it and open a new one?", "Question", wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
@@ -101,11 +89,18 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     if (openFileDialog.ShowModal()==wxID_CANCEL) {
         return;
     }
-    wxString fname2 = openFileDialog.GetPath();
-    const char *fname = static_cast<const char*>(fname2.c_str());
+    wxString fname = openFileDialog.GetPath();
+    /* Open it */
+    open_dbfile(fname.ToStdString());
+}
+
+void MainFrame::open_dbfile(std::string fname) {
+
+    int ret;
+
     /* Open the db from file */
     sqlite3 *db_tmp;
-    ret = sqlite3_open(fname, &db_tmp);
+    ret = sqlite3_open(static_cast<const char*>(fname.c_str()), &db_tmp);
     if (ret!=SQLITE_OK) {
         wxLogMessage("Failed to open file for reading!");
         return;
@@ -127,10 +122,11 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     sqlite3_backup_finish(bkp);
     sqlite3_close(db_tmp);
 
+    /* Store info */
     db_file_path = fs::path(fname);
-
-    /* Populate the mineral listbox */
+    write_config();
     populate_listbox();
+
     return;
 }
 
@@ -161,6 +157,21 @@ void MainFrame::OnSave(wxCommandEvent& event) {
     sqlite3_backup_step(bkp, -1);
     sqlite3_backup_finish(bkp);
     sqlite3_close(db_tmp);
+}
+
+void MainFrame::OnClose(wxCommandEvent& event) {
+    std::string msg = "You are going to close the current database. If you did not save it any edits will be lost. This operation cannot be undone.";
+    wxMessageDialog dial(this, msg, "Are you sure you want to close the current database??", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
+    if (dial.ShowModal() != wxID_YES) return;
+    int ret;
+    ret = sqlite3_close(db);
+    if (ret!=SQLITE_OK) {
+        wxLogMessage("Cannot close current db. Sorry!");
+        return;
+    }
+    db = NULL;
+    mineral_listbox->Clear();
+    mineral_view->Clear();
 }
 
 void MainFrame::OnExit(wxCommandEvent& event) {
@@ -629,4 +640,50 @@ void MainFrame::export_csv(wxCommandEvent& event) {
     sqlite3_finalize(stmt);
     csvfile.close();
 }
+
+fs::path MainFrame::get_config_dirname() {
+    fs::path configdir;
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+     // Windows -- do nothing
+    #else
+    configdir = fs::path(std::getenv("HOME")) / ".mineralapp";
+    #endif
+    return configdir;
+}
+
+void MainFrame::read_config() {
+    fs::path configdir = get_config_dirname();
+    if (configdir.empty()) return;
+    if (!fs::exists(configdir)) return;
+    std::ifstream configfile;
+    configfile.open(configdir/"config.txt");
+    std::string last_open;
+    std::string line;
+    while (std::getline(configfile, line)) {
+        std::istringstream is_line(line);
+        std::string key;
+        if (std::getline(is_line, key, '=')) {
+            std::string value;
+            if (std::getline(is_line, value)) {
+                if (key.compare(std::string("last_open"))==0) {
+                    last_open = value;
+                }
+            }
+        }
+    }
+    configfile.close();
+    if (!last_open.empty()) open_dbfile(last_open);
+}
+
+
+void MainFrame::write_config() {
+    fs::path configdir = get_config_dirname();
+    if (configdir.empty()) return;
+    if (!fs::exists(configdir)) fs::create_directory(configdir);
+    std::ofstream configfile;
+    configfile.open(fs::path(configdir)/"config.txt");
+    configfile << "last_open=" << db_file_path << std::endl;
+    configfile.close();
+}
+
 

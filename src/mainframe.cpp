@@ -1,6 +1,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
 #include <sstream>
 
 #include <wx/wxprec.h>
@@ -27,6 +29,9 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_EXIT,  MainFrame::OnExit)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_LISTBOX(ID_SelectMineral, MainFrame::OnSelectMineral)
+    EVT_TEXT(ID_SearchMineral,          MainFrame::populate_listbox_evt)
+    EVT_TEXT_ENTER(ID_SearchMineral,    MainFrame::populate_listbox_evt)
+    EVT_TEXT_MAXLEN(ID_SearchMineral,   MainFrame::populate_listbox_evt)
     EVT_TEXT_URL(wxID_ANY, MainFrame::OnURL)
 wxEND_EVENT_TABLE()
 
@@ -64,11 +69,19 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     SetStatusText("Welcome to MineralApp!" );
     /* ListBox */
     mineral_listbox = new wxListBox(this, ID_SelectMineral);
+    /* Search entry */
+    mineral_search = new wxTextCtrl(this, ID_SearchMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+    mineral_search->SetMaxLength(5);
+    mineral_search->SetValue("test");
     /* viewbox */
     mineral_view = new wxRichTextCtrl(this, -1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY, wxDefaultValidator, wxTextCtrlNameStr);
-    /* Horizontal sizer -- split listbox and viewbox */
+    /* Sizers */
     wxBoxSizer *hsizer = new wxBoxSizer(wxHORIZONTAL);
-    hsizer->Add(mineral_listbox, 1, wxEXPAND | wxALL, 5);
+    wxBoxSizer *leftvsizer = new wxBoxSizer(wxVERTICAL);
+    leftvsizer->Add(mineral_listbox, 1, wxEXPAND | wxALL, 5);
+    leftvsizer->Add(mineral_search, 0, wxEXPAND | wxALL, 5);
+    leftvsizer->SetSizeHints(this);
+    hsizer->Add(leftvsizer, 1, wxEXPAND | wxALL, 5);
     hsizer->Add(mineral_view, 5, wxEXPAND | wxALL, 5);
     hsizer->SetSizeHints(this);
     SetSizerAndFit(hsizer);
@@ -580,7 +593,12 @@ void MainFrame::db_initialize() {
     return;
 }
 
-void MainFrame::populate_listbox() {
+void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
+    wxString searchstr = mineral_search->GetValue();
+    wxPrintf("%s\n", searchstr);
+}
+
+void MainFrame::populate_listbox(wxString searchstr) {
     mineral_listbox->Clear();
     const char *query = "SELECT MINID,NAME FROM MINERALS";
     int ret;

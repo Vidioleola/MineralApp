@@ -19,10 +19,11 @@
 class MainFrame: public wxFrame {
     public:
         MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-        void populate_listbox();
+        void populate_listbox(wxString searchstr="");
         void draw_mineral_view(int uid);
     private:
         wxListBox *mineral_listbox;
+        wxTextCtrl *mineral_search;
         wxRichTextCtrl *mineral_view;
         void OnNewMineral(wxCommandEvent& event);
         void OnModifyMineral(wxCommandEvent& event);
@@ -36,6 +37,7 @@ class MainFrame: public wxFrame {
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
         void OnURL(wxTextUrlEvent& event);
+        void populate_listbox_evt(wxCommandEvent& event);
         sqlite3 *db;
         void db_initialize();
         void open_dbfile(std::string);
@@ -56,6 +58,7 @@ enum {
     ID_DuplicateMineral,
     ID_DeleteMineral,
     ID_SelectMineral,
-    ID_ExportCSV
+    ID_SearchMineral,
+    ID_ExportCSV,
 };
 

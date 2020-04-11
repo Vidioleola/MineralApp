@@ -29,9 +29,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_EXIT,  MainFrame::OnExit)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
     EVT_LISTBOX(ID_SelectMineral, MainFrame::OnSelectMineral)
-    EVT_TEXT(ID_SearchMineral,          MainFrame::populate_listbox_evt)
-    EVT_TEXT_ENTER(ID_SearchMineral,    MainFrame::populate_listbox_evt)
-    EVT_TEXT_MAXLEN(ID_SearchMineral,   MainFrame::populate_listbox_evt)
+    EVT_TEXT(ID_SearchMineral, MainFrame::populate_listbox_evt)
+    EVT_RADIOBOX(ID_OrderByMineral, MainFrame::populate_listbox_evt)
     EVT_TEXT_URL(wxID_ANY, MainFrame::OnURL)
 wxEND_EVENT_TABLE()
 
@@ -70,16 +69,28 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     /* ListBox */
     mineral_listbox = new wxListBox(this, ID_SelectMineral);
     /* Search entry */
+    wxStaticText *mineral_search_label = new wxStaticText(this, -1, "Filter:");
     mineral_search = new wxTextCtrl(this, ID_SearchMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-    mineral_search->SetMaxLength(5);
-    mineral_search->SetValue("test");
-    /* viewbox */
+    /* Order by */
+    wxStaticText *mineral_orderby_label = new wxStaticText(this, -1, "Order by:");
+    wxArrayString orderby_choices;
+    orderby_choices.Add("Unique ID");
+    orderby_choices.Add("Name");
+    mineral_orderby = new wxRadioBox(this, ID_OrderByMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, orderby_choices, 2, wxRA_HORIZONTAL);
+    /* Grid sizer */
+    wxFlexGridSizer *leftgrid = new wxFlexGridSizer(2,0,0);
+    leftgrid->AddGrowableCol(1,1);
+    leftgrid->Add(mineral_search_label,  0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_search,        1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_orderby_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_orderby,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    /* Viewbox */
     mineral_view = new wxRichTextCtrl(this, -1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY, wxDefaultValidator, wxTextCtrlNameStr);
     /* Sizers */
     wxBoxSizer *hsizer = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer *leftvsizer = new wxBoxSizer(wxVERTICAL);
     leftvsizer->Add(mineral_listbox, 1, wxEXPAND | wxALL, 5);
-    leftvsizer->Add(mineral_search, 0, wxEXPAND | wxALL, 5);
+    leftvsizer->Add(leftgrid, 0, wxEXPAND | wxALL, 5);
     leftvsizer->SetSizeHints(this);
     hsizer->Add(leftvsizer, 1, wxEXPAND | wxALL, 5);
     hsizer->Add(mineral_view, 5, wxEXPAND | wxALL, 5);
@@ -595,12 +606,18 @@ void MainFrame::db_initialize() {
 
 void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
     wxString searchstr = mineral_search->GetValue();
-    wxPrintf("%s\n", searchstr);
+    populate_listbox(str_tolower(searchstr.ToStdString()));
 }
 
-void MainFrame::populate_listbox(wxString searchstr) {
+void MainFrame::populate_listbox(std::string searchstr) {
     mineral_listbox->Clear();
-    const char *query = "SELECT MINID,NAME FROM MINERALS";
+    int orderby = mineral_orderby->GetSelection();
+    const char *query;
+    if (orderby==1) {
+        query = "SELECT MINID,NAME FROM MINERALS ORDER BY NAME";
+    } else {
+        query = "SELECT MINID,NAME FROM MINERALS ORDER BY MINID";
+    }
     int ret;
     sqlite3_stmt *stmt;
     ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
@@ -610,7 +627,9 @@ void MainFrame::populate_listbox(wxString searchstr) {
     }
     while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
         wxString name = wxString(sqlite3_column_text(stmt, 1), wxConvUTF8) + wxString(" [") + wxString(sqlite3_column_text(stmt, 0), wxConvUTF8) + wxString("]");
-        mineral_listbox->Append(name);
+        if (str_tolower(name.ToStdString()).find(searchstr)!=std::string::npos) {
+            mineral_listbox->Append(name);
+        }
     }
     if (ret!=SQLITE_DONE) {
         wxLogMessage("error: ", sqlite3_errmsg(db));

@@ -19,11 +19,12 @@
 class MainFrame: public wxFrame {
     public:
         MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-        void populate_listbox(wxString searchstr="");
+        void populate_listbox(std::string searchstr="");
         void draw_mineral_view(int uid);
     private:
         wxListBox *mineral_listbox;
         wxTextCtrl *mineral_search;
+        wxRadioBox *mineral_orderby;
         wxRichTextCtrl *mineral_view;
         void OnNewMineral(wxCommandEvent& event);
         void OnModifyMineral(wxCommandEvent& event);
@@ -59,6 +60,7 @@ enum {
     ID_DeleteMineral,
     ID_SelectMineral,
     ID_SearchMineral,
+    ID_OrderByMineral,
     ID_ExportCSV,
 };
 

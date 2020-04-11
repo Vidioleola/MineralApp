@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-
+#include <algorithm>
 
 std::string url_encode(const std::string &value) {
 
@@ -41,5 +41,13 @@ std::string str_escape(const std::string &value, char to_escape, char escape_wit
         escaped << c;
     }
     return escaped.str();
+}
+
+/*
+    Convert to lowercase.
+*/
+std::string str_tolower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
+    return s;
 }
 

@@ -7,13 +7,13 @@ MineralApp is a small and simple application to create a database of minerals.
 You can add your mineral collection, storing any details you are interested in,
 helping you (hopefully...) to keep your mineral collection organized.
 
-Project homepage: 3dz2.com/mineralapp
+Project homepage: https://3dz2.com/mineralapp
 
 
 License and Copyright
 ---------------------
 
-&copy; 2019-2020 Simone Conti - 3dz2.com/mineralapp
+&copy; 2019-2020 Simone Conti - https://3dz2.com/mineralapp
 
 You are free to use this software. If you like it and find it useful, I would
 highly appreciate you sending me a postcard (or a mineral!) from your hometown.

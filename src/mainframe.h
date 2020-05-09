@@ -37,6 +37,7 @@ class MainFrame: public wxFrame {
         void export_csv(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
+        void OnHelp(wxCommandEvent& event);
         void OnURL(wxTextUrlEvent& event);
         void populate_listbox_evt(wxCommandEvent& event);
         sqlite3 *db;

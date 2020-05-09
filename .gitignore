@@ -5,7 +5,5 @@ src/mainframe.o
 src/utils.o
 .DS_Store
 MineralApp.app/
-mineralapp-512x512.png
-mineralapp-48x48.png
-mineralapp.icns
-dist/
+.vs/
+msw/Release/

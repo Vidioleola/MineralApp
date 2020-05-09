@@ -10,6 +10,7 @@
     #include <wx/wx.h>
 #endif
 #include <wx/richtext/richtextctrl.h>
+#include <wx/aboutdlg.h>
 
 #include <sqlite3.h> 
 
@@ -28,6 +29,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(wxID_CLOSE, MainFrame::OnClose)
     EVT_MENU(wxID_EXIT,  MainFrame::OnExit)
     EVT_MENU(wxID_ABOUT, MainFrame::OnAbout)
+    EVT_MENU(wxID_HELP,  MainFrame::OnHelp)
     EVT_LISTBOX(ID_SelectMineral, MainFrame::OnSelectMineral)
     EVT_TEXT(ID_SearchMineral, MainFrame::populate_listbox_evt)
     EVT_RADIOBOX(ID_OrderByMineral, MainFrame::populate_listbox_evt)
@@ -58,6 +60,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuMineral->Append(ID_DeleteMineral, "&Delete", "Delete the selected mineral");
     wxMenu *menuHelp = new wxMenu;
     menuHelp->Append(wxID_ABOUT);
+    menuHelp->Append(wxID_HELP, "&Read the manual online", "Open the MineralApp manual on the browser");
     wxMenuBar *menuBar = new wxMenuBar;
     menuBar->Append(menuFile, "&File" );
     menuBar->Append(menuMineral, "&Mineral" );
@@ -203,12 +206,20 @@ void MainFrame::OnExit(wxCommandEvent& event) {
 }
 
 void MainFrame::OnAbout(wxCommandEvent& event) {
-    const char *msg =
-        "MineralApp is a small and simple application to create a database of "
+    wxAboutDialogInfo info;
+    info.SetName("MineralApp");
+    info.SetVersion(VERSION);
+    info.SetDescription( ""
+        "A small and simple application to create a database of "
         "your minerals. You can add your mineral collection, storing any details "
         "you are interested in, helping you (hopefully...) to keep your mineral "
-        "collection well organized!";
-    wxMessageBox(msg, "MineralApp v" VERSION, wxOK | wxICON_INFORMATION);
+        "collection well organized!");
+    info.SetCopyright("(C) 2019-2020 Simone Conti <3dz2.com/mineralapp/>");
+    wxAboutBox(info);
+}
+
+void MainFrame::OnHelp(wxCommandEvent& event) {
+    wxLaunchDefaultBrowser("https://3dz2.com/mineralapp/manual/");
 }
 
 void MainFrame::OnURL(wxTextUrlEvent& event) {
@@ -322,8 +333,10 @@ void MainFrame::draw_mineral_view(int minid) {
     wxRichTextCtrl *r = mineral_view;
 
     /* Set monospace */
-    //wxFont monospace = wxFont(wxDEFAULT, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
     wxFont monospace = wxFont(wxFontInfo().FaceName("Andale Mono"));
+    if (!monospace.IsFixedWidth()) {
+        monospace = wxFont(wxFontInfo().FaceName("Consolas"));
+    }
     r->BeginFont(monospace);
 
     /* Make a style suitable for showing a URL */
@@ -437,10 +450,10 @@ void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
     if (s4=="No" || s4=="no") s4=wxString("");
-    int l1 = strlen(s1);
-    int l2 = strlen(s2);
-    int l3 = strlen(s3);
-    int l4 = strlen(s4);
+    int l1 = s1.length();
+    int l2 = s2.length();
+    int l3 = s3.length();
+    int l4 = s4.length();
     if (l1+l2+l3+l4>0) {
         r->BeginBold(); r->WriteText(name+": "); r->EndBold();
         r->WriteText(s1+std::string(guess_column_width(stmt, 0)-s1.length(), ' '));
@@ -465,10 +478,10 @@ void MainFrame::write_link_row(sqlite3_stmt *stmt) {
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
     if (s4=="No" || s4=="no") s4=wxString("");
-    int l1 = strlen(s1);
-    int l2 = strlen(s2);
-    int l3 = strlen(s3);
-    int l4 = strlen(s4);
+    int l1 = s1.length();
+    int l2 = s2.length();
+    int l3 = s3.length();
+    int l4 = s4.length();
     std::string s1p = url_encode(s1.ToStdString());
     std::string s2p = url_encode(s2.ToStdString());
     std::string s3p = url_encode(s3.ToStdString());
@@ -649,7 +662,7 @@ void MainFrame::export_csv(wxCommandEvent& event) {
         return;
     }
     std::ofstream csvfile;
-    csvfile.open(saveFileDialog.GetPath());
+    csvfile.open(saveFileDialog.GetPath().ToStdString());
     int ret, i;
     int F_NUMBER=127;
     sqlite3_stmt *stmt;
@@ -681,7 +694,7 @@ void MainFrame::export_csv(wxCommandEvent& event) {
 fs::path MainFrame::get_config_dirname() {
     fs::path configdir;
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-     // Windows -- do nothing
+    configdir = fs::path(std::getenv("APPDATA")) / "mineralapp";
     #else
     configdir = fs::path(std::getenv("HOME")) / ".mineralapp";
     #endif

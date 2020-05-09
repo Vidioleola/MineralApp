@@ -23,7 +23,7 @@ ifeq ($(UNAME), Linux)
 CXXFLAGS += `wx-config --cxxflags`
 LDFLAGS  += `wx-config --cxxflags --libs std,richtext`
 LDFLAGS  += -lsqlite3
-all: mineralapp mineralapp-48x48.png mineralapp-512x512.png
+all: mineralapp
 endif
 ifeq ($(UNAME), Darwin)
 CXXFLAGS += `wx-config --cxxflags --static`
@@ -49,10 +49,10 @@ src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h src/uti
 src/utils.o: src/utils.cpp src/utils.h
 	$(CXX) -c src/utils.cpp -o src/utils.o $(CXXFLAGS)
 
-### Linux specific install instructions
+# Linux specific install instructions
 ifeq ($(UNAME), Linux)
 .PHONY: install
-install: mineralapp mineralapp-48x48.png mineralapp-512x512.png mineralapp.svg mineralapp.desktop
+install: mineralapp
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
 	mkdir -p $(DESTDIR)$(PREFIX)/share/applications/
 	mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/
@@ -60,9 +60,9 @@ install: mineralapp mineralapp-48x48.png mineralapp-512x512.png mineralapp.svg m
 	mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/
 	cp mineralapp $(DESTDIR)$(PREFIX)/bin/mineralapp
 	cp mineralapp.desktop $(DESTDIR)$(PREFIX)/share/applications/mineralapp.desktop
-	cp mineralapp-48x48.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/mineralapp.png
-	cp mineralapp-512x512.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/512x512/apps/mineralapp.png
-	cp mineralapp.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/mineralapp.svg
+	cp icon/mineralapp-48.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/mineralapp.png
+	cp icon/mineralapp-512.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/512x512/apps/mineralapp.png
+	cp icon/mineralapp-hires.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/mineralapp.svg
 	-gtk-update-icon-cache /usr/share/icons/hicolor/
 .PHONY: uninstall
 uninstall:
@@ -74,9 +74,9 @@ uninstall:
 	-gtk-update-icon-cache /usr/share/icons/hicolor/
 endif
 
-### MacOS specific install instructions
+# MacOS specific install instructions
 ifeq ($(UNAME), Darwin)
-MineralApp.app: mineralapp Info.plist mineralapp.icns
+MineralApp.app: mineralapp
 	mkdir -p MineralApp.app/Contents
 	mkdir -p MineralApp.app/Contents/MacOS
 	mkdir -p MineralApp.app/Contents/Resources
@@ -84,16 +84,16 @@ MineralApp.app: mineralapp Info.plist mineralapp.icns
 	sed -i -e 's/VERSION/$(VERSION)/g' MineralApp.app/Contents/Info.plist
 	/bin/echo "APPL????" >MineralApp.app/Contents/PkgInfo
 	cp mineralapp MineralApp.app/Contents/MacOS/mineralapp
-	cp mineralapp.icns MineralApp.app/Contents/Resources/
+	cp icon/mineralapp.icns MineralApp.app/Contents/Resources/
 MineralApp.dmg: MineralApp.app
 	rm -f MineralApp.dmg
-	rm -rf dist
-	mkdir -p dist
-	ln -sf /Applications/ dist/
-	mv MineralApp.app dist/
-	hdiutil create -fs HFS+ -srcfolder dist/ -volname MineralApp MineralApp.dmg
-	mv dist/MineralApp.app .
-	rm -rf dist
+	rm -rf tmpdir
+	mkdir -p tmpdir
+	ln -sf /Applications/ tmpdir/
+	mv MineralApp.app tmpdir/
+	hdiutil create -fs HFS+ -srcfolder tmpdir/ -volname MineralApp MineralApp.dmg
+	mv tmpdir/MineralApp.app .
+	rm -rf tmpdir
 .PHONY: install
 install: MineralApp.app
 	rm -rf /Applications/MineralApp.app
@@ -103,26 +103,8 @@ uninstall:
 	rm -rf /Applications/MineralApp.app
 endif
 
-
-### Icon images
-# With Inkscape create:
-#   mineralapp.svg
-#   mineralapp.png
-# png can have any resolution you want, but make sure it is a square image.
-mineralapp-48x48.png: mineralapp.png
-	convert mineralapp.png -resize 48x48 mineralapp-48x48.png
-mineralapp-512x512.png: mineralapp.png
-	convert mineralapp.png -resize 512x512 mineralapp-512x512.png
-# For MacOS:
-ifeq ($(UNAME), Darwin)
-mineralapp.icns: mineralapp-512x512.png
-	sips -s format icns mineralapp-512x512.png --out mineralapp.icns
-endif
-
 # Clean build
 .PHONY: clean
 clean:
 	rm -rf mineralapp MineralApp.app src/app.o src/addmodframe.o src/mainframe.o src/utils.o
-	rm -f mineralapp-512x512.png mineralapp-48x48.png mineralapp.icns
-	rm -rf dist/
 

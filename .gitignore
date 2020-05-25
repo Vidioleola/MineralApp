@@ -2,7 +2,10 @@ src/addmodframe.o
 src/app.o
 src/mainframe.o
 src/utils.o
+src/addtodb.o
+src/csv.o
 .DS_Store
 MineralApp.app/
 .vs/
 msw/Release/
+/mineralapp

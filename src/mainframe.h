@@ -34,6 +34,7 @@ class MainFrame: public wxFrame {
         void OnOpen(wxCommandEvent& event);
         void OnSave(wxCommandEvent& event);
         void OnClose(wxCommandEvent& event);
+        void import_csv(wxCommandEvent& event);
         void export_csv(wxCommandEvent& event);
         void OnExit(wxCommandEvent& event);
         void OnAbout(wxCommandEvent& event);
@@ -63,5 +64,6 @@ enum {
     ID_SearchMineral,
     ID_OrderByMineral,
     ID_ExportCSV,
+    ID_ImportCSV,
 };
 

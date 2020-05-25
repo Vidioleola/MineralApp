@@ -38,8 +38,8 @@ include version.in
 CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MINOR)"' -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION='"$(VERSION)"'
 
 # Compile source code, make mineralapp executable
-mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/utils.o
-	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o src/utils.o -o mineralapp
+mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/utils.o src/addtodb.o src/csv.o 
+	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o src/utils.o src/addtodb.o src/csv.o -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
 src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h
@@ -48,6 +48,10 @@ src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h src/uti
 	$(CXX) -c src/addmodframe.cpp -o src/addmodframe.o $(CXXFLAGS)
 src/utils.o: src/utils.cpp src/utils.h
 	$(CXX) -c src/utils.cpp -o src/utils.o $(CXXFLAGS)
+src/addtodb.o: src/addtodb.cpp
+	$(CXX) -c src/addtodb.cpp -o src/addtodb.o $(CXXFLAGS)
+src/csv.o: src/csv.cpp
+	$(CXX) -c src/csv.cpp -o src/csv.o $(CXXFLAGS)
 
 # Linux specific install instructions
 ifeq ($(UNAME), Linux)
@@ -106,5 +110,5 @@ endif
 # Clean build
 .PHONY: clean
 clean:
-	rm -rf mineralapp MineralApp.app src/app.o src/addmodframe.o src/mainframe.o src/utils.o
+	rm -rf mineralapp MineralApp.app src/app.o src/addmodframe.o src/mainframe.o src/utils.o src/addtodb.o src/csv.o
 

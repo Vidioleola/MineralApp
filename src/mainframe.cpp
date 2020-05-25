@@ -17,9 +17,11 @@
 #include "mainframe.h"
 #include "addmodframe.h"
 #include "utils.h"
+#include "csv.hpp"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)
+    EVT_MENU(ID_ImportCSV,        MainFrame::import_csv)
     EVT_MENU(ID_NewMineral,       MainFrame::OnNewMineral)
     EVT_MENU(ID_ModifyMineral,    MainFrame::OnModifyMineral)
     EVT_MENU(ID_DuplicateMineral, MainFrame::OnDuplicateMineral)
@@ -50,6 +52,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuFile->Append(wxID_OPEN);
     menuFile->Append(wxID_SAVE);
     menuFile->Append(wxID_CLOSE);
+    menuFile->Append(ID_ImportCSV, "&Import CSV", "Import mineral database from a CSV file");
     menuFile->Append(ID_ExportCSV, "&Export CSV", "Export mineral database as CSV file");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
@@ -652,6 +655,33 @@ void MainFrame::populate_listbox(std::string searchstr) {
 }
 
 
+void MainFrame::import_csv(wxCommandEvent& event) {
+    /* Check if some db is already opened and warn the user */
+    if (db) {
+        wxMessageDialog *dial = new wxMessageDialog(NULL, "You have already an open database. By importing from a CSV file any duplicate mineral id will overwtie existing ones. Do you want to continue?", "Question", wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
+        if (dial->ShowModal()!=wxID_YES) {
+            return;
+        }
+    } else {
+        db_initialize();
+    }
+
+    /* Get the filename of the db to read */
+    wxFileDialog openFileDialog(this, "Import CSV file", wxEmptyString, "minerals.csv",  "CSV files (*.csv)|*.csv", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+    if (openFileDialog.ShowModal()==wxID_CANCEL) {
+        return;
+    }
+    wxString fname = openFileDialog.GetPath();
+
+    std::string errmsg;
+    bool success = ::import_csv(db, fname.ToStdString(), &errmsg);
+    if (!success) {
+        wxLogMessage(wxString("Import failed! ") + errmsg);
+    }
+    populate_listbox();
+}
+
+
 void MainFrame::export_csv(wxCommandEvent& event) {
     if (!db) {
         wxLogMessage("Nothing to save!");
@@ -664,7 +694,7 @@ void MainFrame::export_csv(wxCommandEvent& event) {
     std::ofstream csvfile;
     csvfile.open(saveFileDialog.GetPath().ToStdString());
     int ret, i;
-    int F_NUMBER=127;
+    int F_NUMBER=63;
     sqlite3_stmt *stmt;
     ret = sqlite3_prepare_v2(db, "SELECT * FROM MINERALS", -1, &stmt, NULL);
     if (ret!=SQLITE_OK) {

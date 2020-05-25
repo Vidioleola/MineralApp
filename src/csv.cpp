@@ -44,8 +44,7 @@ bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
     if (!import_csv_check(filename, errmsg)) {
         return false;
     }
-    int ret, minid;
-    bool success;
+    int success_id;
     std::ifstream f(filename);
     aria::csv::CsvParser parser(f);
     std::vector<std::string> data;
@@ -55,12 +54,9 @@ bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
             data.push_back(field);
         }
         if (rowndx>0) {
-            ret = sscanf(data[0].c_str(), "%d", &minid);
-            if (ret!=1) minid = -1;
-            data.erase(data.begin());
-            success = db_addmod_mineral(db, minid, -1, data, errmsg);
-            if (!success) {
-                *errmsg = *errmsg + " While reading minid " + std::to_string(minid);
+            success_id = db_addmod_mineral(db, data, -2, errmsg);
+            if (success_id<-1) {
+                *errmsg = *errmsg + " While reading minid " + data[0] + " " + data[1];
                 return false;
             }
         }

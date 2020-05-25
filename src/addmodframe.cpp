@@ -9,6 +9,7 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
+#include "addtodb.hpp"
 
 wxBEGIN_EVENT_TABLE(AddModFrame, wxFrame)
     EVT_BUTTON(ID_AddMod_Save, AddModFrame::OnSave)
@@ -298,119 +299,86 @@ AddModFrame::AddModFrame(MainFrame *parent, const wxString& title, sqlite3 *main
 
 void AddModFrame::OnSave(wxCommandEvent& event) {
 
-    const char *query_insert = "INSERT INTO MINERALS (MINID, NAME, LOCALITY, LOCID_MNDAT, SIZE, WEIGHT, ACQUISITION, COLLECTION, VALUE, S1_SPECIES, S1_CLASS, S1_CHEMF, S1_COLOR, S1_FLSW, S1_FLMW, S1_FLLW, S1_FL405, S1_PHSW, S1_PHMW, S1_PHLW, S1_PH405, S1_TENEBR, S2_SPECIES, S2_CLASS, S2_CHEMF, S2_COLOR, S2_FLSW, S2_FLMW, S2_FLLW, S2_FL405, S2_PHSW, S2_PHMW, S2_PHLW, S2_PH405, S2_TENEBR, S3_SPECIES, S3_CLASS, S3_CHEMF, S3_COLOR, S3_FLSW, S3_FLMW, S3_FLLW, S3_FL405, S3_PHSW, S3_PHMW, S3_PHLW, S3_PH405, S3_TENEBR, S4_SPECIES, S4_CLASS, S4_CHEMF, S4_COLOR, S4_FLSW, S4_FLMW, S4_FLLW, S4_FL405, S4_PHSW, S4_PHMW, S4_PHLW, S4_PH405, S4_TENEBR, RADIOACT, COMMENTS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-    const char *query_insert_autoid = "INSERT INTO MINERALS (NAME, LOCALITY, LOCID_MNDAT, SIZE, WEIGHT, ACQUISITION, COLLECTION, VALUE, S1_SPECIES, S1_CLASS, S1_CHEMF, S1_COLOR, S1_FLSW, S1_FLMW, S1_FLLW, S1_FL405, S1_PHSW, S1_PHMW, S1_PHLW, S1_PH405, S1_TENEBR, S2_SPECIES, S2_CLASS, S2_CHEMF, S2_COLOR, S2_FLSW, S2_FLMW, S2_FLLW, S2_FL405, S2_PHSW, S2_PHMW, S2_PHLW, S2_PH405, S2_TENEBR, S3_SPECIES, S3_CLASS, S3_CHEMF, S3_COLOR, S3_FLSW, S3_FLMW, S3_FLLW, S3_FL405, S3_PHSW, S3_PHMW, S3_PHLW, S3_PH405, S3_TENEBR, S4_SPECIES, S4_CLASS, S4_CHEMF, S4_COLOR, S4_FLSW, S4_FLMW, S4_FLLW, S4_FL405, S4_PHSW, S4_PHMW, S4_PHLW, S4_PH405, S4_TENEBR, RADIOACT, COMMENTS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-   const char *query_update = "UPDATE MINERALS SET MINID=?, NAME=?, LOCALITY=?, LOCID_MNDAT=?, SIZE=?, WEIGHT=?, ACQUISITION=?, COLLECTION=?, VALUE=?, S1_SPECIES=?, S1_CLASS=?, S1_CHEMF=?, S1_COLOR=?, S1_FLSW=?, S1_FLMW=?, S1_FLLW=?, S1_FL405=?, S1_PHSW=?, S1_PHMW=?, S1_PHLW=?, S1_PH405=?, S1_TENEBR=?, S2_SPECIES=?, S2_CLASS=?, S2_CHEMF=?, S2_COLOR=?, S2_FLSW=?, S2_FLMW=?, S2_FLLW=?, S2_FL405=?, S2_PHSW=?, S2_PHMW=?, S2_PHLW=?, S2_PH405=?, S2_TENEBR=?, S3_SPECIES=?, S3_CLASS=?, S3_CHEMF=?, S3_COLOR=?, S3_FLSW=?, S3_FLMW=?, S3_FLLW=?, S3_FL405=?, S3_PHSW=?, S3_PHMW=?, S3_PHLW=?, S3_PH405=?, S3_TENEBR=?, S4_SPECIES=?, S4_CLASS=?, S4_CHEMF=?, S4_COLOR=?, S4_FLSW=?, S4_FLMW=?, S4_FLLW=?, S4_FL405=?, S4_PHSW=?, S4_PHMW=?, S4_PHLW=?, S4_PH405=?, S4_TENEBR=?, RADIOACT=?, COMMENTS=? WHERE MINID=?;";
+    std::vector<std::string> data;
 
-    /* Setup the db connection and choose the query to use: with specified minid, or auto, or updte */
-    int ret;
-    sqlite3_stmt *stmt;
-    const char *minid_str = entry_minid->GetValue().ToStdString().c_str();
-    int minid_int;
-    int ndx = 1;
-    ret = sscanf(minid_str, "%d", &minid_int);
-    if (ret!=1) {
-        minid_int = -1;
-        if (strlen(minid_str)>0) {
-            wxLogMessage("WARNING! You specified an ID but I could not make and integer from it. Using a random ID instead.");
-        }
+    data.push_back(entry_minid->GetValue().ToStdString());
+
+    data.push_back(entry_name->GetValue().ToStdString());
+    data.push_back(entry_locality->GetValue().ToStdString());
+    data.push_back(entry_locid->GetValue().ToStdString());
+    data.push_back(entry_size->GetValue().ToStdString());
+    data.push_back(entry_weight->GetValue().ToStdString());
+    data.push_back(entry_acquisition->GetValue().ToStdString());
+    data.push_back(entry_collection->GetValue().ToStdString());
+    data.push_back(entry_value->GetValue().ToStdString());
+
+    data.push_back(entry_s1_species->GetValue().ToStdString());
+    data.push_back(entry_s1_class->GetValue().ToStdString());
+    data.push_back(entry_s1_chemf->GetValue().ToStdString());
+    data.push_back(entry_s1_color->GetValue().ToStdString());
+    data.push_back(entry_s1_flsw->GetValue().ToStdString());
+    data.push_back(entry_s1_flmw->GetValue().ToStdString());
+    data.push_back(entry_s1_fllw->GetValue().ToStdString());
+    data.push_back(entry_s1_fl405->GetValue().ToStdString());
+    data.push_back(entry_s1_phsw->GetValue().ToStdString());
+    data.push_back(entry_s1_phmw->GetValue().ToStdString());
+    data.push_back(entry_s1_phlw->GetValue().ToStdString());
+    data.push_back(entry_s1_ph405->GetValue().ToStdString());
+    data.push_back(entry_s1_tenebr->GetValue().ToStdString());
+
+    data.push_back(entry_s2_species->GetValue().ToStdString());
+    data.push_back(entry_s2_class->GetValue().ToStdString());
+    data.push_back(entry_s2_chemf->GetValue().ToStdString());
+    data.push_back(entry_s2_color->GetValue().ToStdString());
+    data.push_back(entry_s2_flsw->GetValue().ToStdString());
+    data.push_back(entry_s2_flmw->GetValue().ToStdString());
+    data.push_back(entry_s2_fllw->GetValue().ToStdString());
+    data.push_back(entry_s2_fl405->GetValue().ToStdString());
+    data.push_back(entry_s2_phsw->GetValue().ToStdString());
+    data.push_back(entry_s2_phmw->GetValue().ToStdString());
+    data.push_back(entry_s2_phlw->GetValue().ToStdString());
+    data.push_back(entry_s2_ph405->GetValue().ToStdString());
+    data.push_back(entry_s2_tenebr->GetValue().ToStdString());
+
+    data.push_back(entry_s3_species->GetValue().ToStdString());
+    data.push_back(entry_s3_class->GetValue().ToStdString());
+    data.push_back(entry_s3_chemf->GetValue().ToStdString());
+    data.push_back(entry_s3_color->GetValue().ToStdString());
+    data.push_back(entry_s3_flsw->GetValue().ToStdString());
+    data.push_back(entry_s3_flmw->GetValue().ToStdString());
+    data.push_back(entry_s3_fllw->GetValue().ToStdString());
+    data.push_back(entry_s3_fl405->GetValue().ToStdString());
+    data.push_back(entry_s3_phsw->GetValue().ToStdString());
+    data.push_back(entry_s3_phmw->GetValue().ToStdString());
+    data.push_back(entry_s3_phlw->GetValue().ToStdString());
+    data.push_back(entry_s3_ph405->GetValue().ToStdString());
+    data.push_back(entry_s3_tenebr->GetValue().ToStdString());
+
+    data.push_back(entry_s4_species->GetValue().ToStdString());
+    data.push_back(entry_s4_class->GetValue().ToStdString());
+    data.push_back(entry_s4_chemf->GetValue().ToStdString());
+    data.push_back(entry_s4_color->GetValue().ToStdString());
+    data.push_back(entry_s4_flsw->GetValue().ToStdString());
+    data.push_back(entry_s4_flmw->GetValue().ToStdString());
+    data.push_back(entry_s4_fllw->GetValue().ToStdString());
+    data.push_back(entry_s4_fl405->GetValue().ToStdString());
+    data.push_back(entry_s4_phsw->GetValue().ToStdString());
+    data.push_back(entry_s4_phmw->GetValue().ToStdString());
+    data.push_back(entry_s4_phlw->GetValue().ToStdString());
+    data.push_back(entry_s4_ph405->GetValue().ToStdString());
+    data.push_back(entry_s4_tenebr->GetValue().ToStdString());
+
+    data.push_back(entry_radioact->GetValue().ToStdString());
+    data.push_back(entry_comments->GetValue().ToStdString());
+
+    std::string errmsg = "";
+    int success_id = db_addmod_mineral(db, data, modifying, &errmsg);
+    if (success_id<-1) {
+        wxLogMessage(wxString(errmsg));
     }
-    if (modifying<0) {
-        if (minid_int<0) {
-            sqlite3_prepare_v2(db, query_insert_autoid, strlen(query_insert_autoid), &stmt, NULL);
-        } else {
-            sqlite3_prepare_v2(db, query_insert, strlen(query_insert), &stmt, NULL);
-            sqlite3_bind_int(stmt, ndx, minid_int); ndx+=1;
-        }
-    } else {
-        sqlite3_prepare_v2(db, query_update, strlen(query_update), &stmt, NULL);
-        if (minid_int<0) {
-            minid_int = modifying;
-        }
-        sqlite3_bind_int(stmt, ndx, minid_int); ndx+=1;
-    }
-
-    /* Bind all 63 inputs... */
-    sqlite3_bind_text(stmt, ndx, entry_name->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_locality->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_locid->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_size->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_weight->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_acquisition->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_collection->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_value->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    sqlite3_bind_text(stmt, ndx, entry_s1_species->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_class->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_chemf->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_color->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_flsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_flmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_fllw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_fl405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_phsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_phmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_phlw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_ph405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s1_tenebr->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    sqlite3_bind_text(stmt, ndx, entry_s2_species->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_class->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_chemf->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_color->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_flsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_flmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_fllw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_fl405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_phsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_phmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_phlw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_ph405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s2_tenebr->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    sqlite3_bind_text(stmt, ndx, entry_s3_species->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_class->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_chemf->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_color->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_flsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_flmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_fllw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_fl405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_phsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_phmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_phlw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_ph405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s3_tenebr->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    sqlite3_bind_text(stmt, ndx, entry_s4_species->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_class->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_chemf->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_color->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_flsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_flmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_fllw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_fl405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_phsw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_phmw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_phlw->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_ph405->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_s4_tenebr->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    sqlite3_bind_text(stmt, ndx, entry_radioact->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-    sqlite3_bind_text(stmt, ndx, entry_comments->GetValue().utf8_str(), -1, SQLITE_TRANSIENT); ndx+=1;
-
-    if (modifying>=0) {
-        sqlite3_bind_int(stmt, ndx, modifying); ndx+=1;
-    }
-
-    ret = sqlite3_step(stmt);
-    if (ret!=SQLITE_DONE) {
-        wxLogMessage(wxString("error: ") + wxString(sqlite3_errmsg(db)));
-    }
-    sqlite3_finalize(stmt);
 
     main_window->populate_listbox();
-    main_window->draw_mineral_view(minid_int);
+    main_window->draw_mineral_view(success_id);
     Close(true);
     return;
 }

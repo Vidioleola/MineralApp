@@ -4,38 +4,68 @@
 #include <iostream>
 #include <sqlite3.h> 
 
-bool db_addmod_mineral(sqlite3 *db, int minid_new, int minid_mod, std::vector<std::string> data, std::string *errmsg) {
 
-    const char *query_insert = "INSERT OR REPLACE INTO MINERALS (MINID, NAME, LOCALITY, LOCID_MNDAT, SIZE, WEIGHT, ACQUISITION, COLLECTION, VALUE, S1_SPECIES, S1_CLASS, S1_CHEMF, S1_COLOR, S1_FLSW, S1_FLMW, S1_FLLW, S1_FL405, S1_PHSW, S1_PHMW, S1_PHLW, S1_PH405, S1_TENEBR, S2_SPECIES, S2_CLASS, S2_CHEMF, S2_COLOR, S2_FLSW, S2_FLMW, S2_FLLW, S2_FL405, S2_PHSW, S2_PHMW, S2_PHLW, S2_PH405, S2_TENEBR, S3_SPECIES, S3_CLASS, S3_CHEMF, S3_COLOR, S3_FLSW, S3_FLMW, S3_FLLW, S3_FL405, S3_PHSW, S3_PHMW, S3_PHLW, S3_PH405, S3_TENEBR, S4_SPECIES, S4_CLASS, S4_CHEMF, S4_COLOR, S4_FLSW, S4_FLMW, S4_FLLW, S4_FL405, S4_PHSW, S4_PHMW, S4_PHLW, S4_PH405, S4_TENEBR, RADIOACT, COMMENTS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-    const char *query_insert_autoid = "INSERT OR REPLACE INTO MINERALS (NAME, LOCALITY, LOCID_MNDAT, SIZE, WEIGHT, ACQUISITION, COLLECTION, VALUE, S1_SPECIES, S1_CLASS, S1_CHEMF, S1_COLOR, S1_FLSW, S1_FLMW, S1_FLLW, S1_FL405, S1_PHSW, S1_PHMW, S1_PHLW, S1_PH405, S1_TENEBR, S2_SPECIES, S2_CLASS, S2_CHEMF, S2_COLOR, S2_FLSW, S2_FLMW, S2_FLLW, S2_FL405, S2_PHSW, S2_PHMW, S2_PHLW, S2_PH405, S2_TENEBR, S3_SPECIES, S3_CLASS, S3_CHEMF, S3_COLOR, S3_FLSW, S3_FLMW, S3_FLLW, S3_FL405, S3_PHSW, S3_PHMW, S3_PHLW, S3_PH405, S3_TENEBR, S4_SPECIES, S4_CLASS, S4_CHEMF, S4_COLOR, S4_FLSW, S4_FLMW, S4_FLLW, S4_FL405, S4_PHSW, S4_PHMW, S4_PHLW, S4_PH405, S4_TENEBR, RADIOACT, COMMENTS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-   const char *query_update = "UPDATE MINERALS SET MINID=?, NAME=?, LOCALITY=?, LOCID_MNDAT=?, SIZE=?, WEIGHT=?, ACQUISITION=?, COLLECTION=?, VALUE=?, S1_SPECIES=?, S1_CLASS=?, S1_CHEMF=?, S1_COLOR=?, S1_FLSW=?, S1_FLMW=?, S1_FLLW=?, S1_FL405=?, S1_PHSW=?, S1_PHMW=?, S1_PHLW=?, S1_PH405=?, S1_TENEBR=?, S2_SPECIES=?, S2_CLASS=?, S2_CHEMF=?, S2_COLOR=?, S2_FLSW=?, S2_FLMW=?, S2_FLLW=?, S2_FL405=?, S2_PHSW=?, S2_PHMW=?, S2_PHLW=?, S2_PH405=?, S2_TENEBR=?, S3_SPECIES=?, S3_CLASS=?, S3_CHEMF=?, S3_COLOR=?, S3_FLSW=?, S3_FLMW=?, S3_FLLW=?, S3_FL405=?, S3_PHSW=?, S3_PHMW=?, S3_PHLW=?, S3_PH405=?, S3_TENEBR=?, S4_SPECIES=?, S4_CLASS=?, S4_CHEMF=?, S4_COLOR=?, S4_FLSW=?, S4_FLMW=?, S4_FLLW=?, S4_FL405=?, S4_PHSW=?, S4_PHMW=?, S4_PHLW=?, S4_PH405=?, S4_TENEBR=?, RADIOACT=?, COMMENTS=? WHERE MINID=?;";
+static std::vector<std::string> data_header = {
+    "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
+    "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
+    "S2_SPECIES", "S2_CLASS", "S2_CHEMF", "S2_COLOR", "S2_FLSW", "S2_FLMW", "S2_FLLW", "S2_FL405", "S2_PHSW", "S2_PHMW", "S2_PHLW", "S2_PH405", "S2_TENEBR",
+    "S3_SPECIES", "S3_CLASS", "S3_CHEMF", "S3_COLOR", "S3_FLSW", "S3_FLMW", "S3_FLLW", "S3_FL405", "S3_PHSW", "S3_PHMW", "S3_PHLW", "S3_PH405", "S3_TENEBR",
+    "S4_SPECIES", "S4_CLASS", "S4_CHEMF", "S4_COLOR", "S4_FLSW", "S4_FLMW", "S4_FLLW", "S4_FL405", "S4_PHSW", "S4_PHMW", "S4_PHLW", "S4_PH405", "S4_TENEBR",
+    "RADIOACT", "COMMENTS"
+};
+
+
+int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg) {
 
     /* Check data vector size */
-    if (data.size()!=62) {
-        *errmsg = std::string("Data should contain 62 items, but is has ") + std::to_string(data.size());
-        return false;
+    if (data.size()!=63) {
+        *errmsg = std::string("Data should contain 63 items, but is has ") + std::to_string(data.size());
+        return -2;
     }
 
-    /* Setup the db connection and choose the query to use: with specified minid, or auto, or updte */
+    /* Get the minid from data[0] */
     int ret;
+    int minid_new;
+    ret = sscanf(data[0].c_str(), "%d", &minid_new);
+    if (ret!=1) minid_new = -1;
+    data.erase(data.begin());
+
+    /* Create SQL query */
+    std::string query = "";
+    if (minid_mod>0) {
+        query += "UPDATE MINERALS SET ";
+        for (int i=0; i<62; i++) { query += data_header[i] + "=?, "; }
+        query += data_header[62] + "=? ";
+        query += "WHERE MINID=?;";
+    } else {
+        query += "INSERT ";
+        if (minid_mod==-2) { query += "OR REPLACE "; }
+        query += "INTO MINERALS (";
+        if (minid_new>0) { query += "MINID, "; }
+        for (int i=1; i<62; i++) { query += data_header[i] + ", "; }
+        query += data_header[62] + ") ";
+        query += "VALUES (";
+        for (int i=1; i<62; i++) { query += "?,"; }
+        if (minid_new>0) { query += "?,"; }
+        query += "?);";
+    }
+
+    /* Setup the db connection */
     sqlite3_stmt *stmt;
     int ndx = 1;
+    sqlite3_prepare_v2(db, query.c_str(), strlen(query.c_str()), &stmt, NULL);
     if (minid_mod<0) {
-        if (minid_new<0) {
-            sqlite3_prepare_v2(db, query_insert_autoid, strlen(query_insert_autoid), &stmt, NULL);
-        } else {
-            sqlite3_prepare_v2(db, query_insert, strlen(query_insert), &stmt, NULL);
+        if (minid_new>0) {
             sqlite3_bind_int(stmt, ndx, minid_new); ndx+=1;
         }
     } else {
-        sqlite3_prepare_v2(db, query_update, strlen(query_update), &stmt, NULL);
         if (minid_new<0) {
             minid_new = minid_mod;
         }
         sqlite3_bind_int(stmt, ndx, minid_new); ndx+=1;
     }
 
-    /* Bind all inputs... */
+    /* Bind all inputs */
     for (int i=0; i<62; i++) {
         sqlite3_bind_text(stmt, ndx, data[i].c_str(), -1, SQLITE_TRANSIENT); ndx+=1;
     }
@@ -48,10 +78,10 @@ bool db_addmod_mineral(sqlite3 *db, int minid_new, int minid_mod, std::vector<st
     if (ret!=SQLITE_DONE) {
         *errmsg = std::string("Internal error: ") + std::string(sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
-        return false;
+        return -2;
     }
 
     sqlite3_finalize(stmt);
-    return true;
+    return minid_new;
 }
 

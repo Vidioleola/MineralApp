@@ -3,7 +3,12 @@
 #include <sqlite3.h>
 #include "parsecsv.hpp"
 #include "addtodb.hpp"
+#include "utils.h"
 
+#include <wx/wxprec.h>
+#ifndef WX_PRECOMP
+    #include <wx/wx.h>
+#endif
 
 static std::vector<std::string> data_header = {
     "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
@@ -65,4 +70,45 @@ bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
     }
     return true;
 }
+
+
+bool export_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
+
+    std::ofstream csvfile;
+    csvfile.open(filename);
+    int ret, i;
+
+    /* Open connection to DB */
+    sqlite3_stmt *stmt;
+    ret = sqlite3_prepare_v2(db, "SELECT * FROM MINERALS", -1, &stmt, NULL);
+    if (ret!=SQLITE_OK) {
+        *errmsg += std::string("sql error prepare: ") + std::string(sqlite3_errmsg(db));
+        return false;
+    }
+
+    /* Write CSV header */
+    for (i=0; i<63-1; i++) {
+        csvfile << data_header[i] << ",";
+    }
+    csvfile << data_header[62] << std::endl;
+
+    /* Write all data */
+    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
+        for (i=0; i<63; i++) {
+            csvfile << "\"" << str_escape(wxString(sqlite3_column_text(stmt, i), wxConvUTF8).ToStdString(), '"', '"') << "\"";
+            if (i+1!=63) csvfile << ",";
+        }
+        csvfile << std::endl;
+    }
+
+    /* Close and return */
+    if (ret!=SQLITE_DONE) {
+        *errmsg += std::string("sql error done: ") + std::string(sqlite3_errmsg(db));
+        return false;
+    }
+    sqlite3_finalize(stmt);
+    csvfile.close();
+    return true;
+}
+
 

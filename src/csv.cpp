@@ -19,7 +19,7 @@ static std::vector<std::string> data_header = {
     "RADIOACT", "COMMENTS"
 };
 
-bool import_csv_check(std::string filename, std::string *errmsg) {
+static bool import_csv_check(std::string filename, std::string *errmsg) {
     std::ifstream f(filename);
     aria::csv::CsvParser parser(f);
     int index = 0;
@@ -45,29 +45,42 @@ bool import_csv_check(std::string filename, std::string *errmsg) {
     return false;
 }
 
-bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
-    if (!import_csv_check(filename, errmsg)) {
-        return false;
-    }
+static bool import_csv_core(sqlite3 *db, std::string filename, std::string *errmsg, bool skip_miss_id) {
     int success_id;
+    int ret;
+    int minid;
     std::ifstream f(filename);
     aria::csv::CsvParser parser(f);
     std::vector<std::string> data;
     int rowndx = 0;
     for (auto& row : parser) {
+        rowndx++;
+        data.clear();
         for (auto& field : row) {
             data.push_back(field);
         }
-        if (rowndx>0) {
+        if (rowndx>1) {
+            ret = sscanf(data[0].c_str(), "%d", &minid);
+            if (ret!=1) minid = -1;
+            if (skip_miss_id) {
+                if (minid<0) continue;
+            } else {
+                if (minid>0) continue;
+            }
             success_id = db_addmod_mineral(db, data, -2, errmsg);
             if (success_id<-1) {
                 *errmsg = *errmsg + " While reading minid " + data[0] + " " + data[1];
                 return false;
             }
         }
-        data.clear();
-        rowndx++;
     }
+    return true;
+}
+
+bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
+    if (!import_csv_check(filename, errmsg)) return false;
+    if (!import_csv_core(db, filename, errmsg, true)) return false;
+    if (!import_csv_core(db, filename, errmsg, false)) return false;
     return true;
 }
 

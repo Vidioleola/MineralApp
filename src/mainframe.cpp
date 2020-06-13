@@ -398,7 +398,7 @@ void MainFrame::draw_mineral_view(int minid) {
     ndx = 9;
     write_table_row(stmt, "Species        ", ndx); ndx+=1;
     write_table_row(stmt, "Class          ", ndx); ndx+=1;
-    write_table_row(stmt, "Chem. Formula  ", ndx); ndx+=1;
+    write_table_row_chemf(stmt, "Chem. Formula  ", ndx); ndx+=1;
     write_table_row(stmt, "Color          ", ndx); ndx+=1;
     write_table_row(stmt, "Fluorescence SW", ndx); ndx+=1;
     write_table_row(stmt, "Fluorescence MW", ndx); ndx+=1;
@@ -466,6 +466,79 @@ void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
         r->Newline();
     }
 }
+
+static int write_chemf(wxRichTextCtrl *r, wxString chemf) {
+
+    if (chemf=="") return 0;
+
+    int inserted = 0;
+    bool subscript = true;
+    int subsup = 0;
+
+    if (chemf.find(" . ")!=std::string::npos) {
+        chemf = chemf.replace(chemf.find(" . "), 3, "*");
+    }
+    for (int n=0; n<chemf.length(); n++) {
+        char tchar = chemf[n];
+        char nchar = 0;
+        if (n<chemf.length()-1) {
+            nchar = chemf[n+1];
+        }
+        if (tchar=='+' || tchar=='-' || nchar=='+' || nchar=='-') {
+            r->WriteText(wxString(1,tchar));
+            r->SetSelection(r->GetCaretPosition(), r->GetCaretPosition()+1);
+            r->ApplyTextEffectToSelection(wxTEXT_ATTR_EFFECT_SUPERSCRIPT);
+            r->SetSelection(0,0);
+            subsup++;
+        } else if ((isdigit(tchar) || tchar=='.') && subscript) {
+            r->WriteText(wxString(1,tchar));
+            r->SetSelection(r->GetCaretPosition(), r->GetCaretPosition()+1);
+            r->ApplyTextEffectToSelection(wxTEXT_ATTR_EFFECT_SUBSCRIPT);
+            r->SetSelection(0,0);
+            subsup++;
+        } else if (tchar=='*') {
+            r->WriteText("\u30fb");
+            subscript = false;
+        } else {
+            r->WriteText(wxString(1,tchar));
+            if (isalpha(tchar)) {
+                subscript = true;
+            }
+        }
+        inserted++;
+    }
+
+    for (int i=0; i<subsup/3; i++) r->WriteText(" ");
+
+    return inserted;
+}
+
+
+void MainFrame::write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx) {
+    wxRichTextCtrl *r = mineral_view;
+    wxString s1 = wxString(sqlite3_column_text(stmt, ndx+0*13), wxConvUTF8);
+    wxString s2 = wxString(sqlite3_column_text(stmt, ndx+1*13), wxConvUTF8);
+    wxString s3 = wxString(sqlite3_column_text(stmt, ndx+2*13), wxConvUTF8);
+    wxString s4 = wxString(sqlite3_column_text(stmt, ndx+3*13), wxConvUTF8);
+    if (s1=="No" || s1=="no") s1=wxString("");
+    if (s2=="No" || s2=="no") s2=wxString("");
+    if (s3=="No" || s3=="no") s3=wxString("");
+    if (s4=="No" || s4=="no") s4=wxString("");
+    int l1 = s1.length();
+    int l2 = s2.length();
+    int l3 = s3.length();
+    int l4 = s4.length();
+    if (l1+l2+l3+l4>0) {
+        r->BeginBold(); r->WriteText(name+": "); r->EndBold();
+        l1 = write_chemf(r, s1); r->WriteText(std::string(guess_column_width(stmt, 0)-l1, ' '));
+        if (l2+l3+l4>0) {l2 = write_chemf(r, s2); r->WriteText(std::string(guess_column_width(stmt, 1)-l2, ' '));}
+        if (l3+l4>0) {l3 = write_chemf(r, s3); r->WriteText(std::string(guess_column_width(stmt, 2)-l3, ' '));}
+        if (l4>0) {l4 = write_chemf(r, s4); r->WriteText(std::string(guess_column_width(stmt, 3)-l4, ' '));}
+        r->Newline();
+    }
+}
+
+
 
 void MainFrame::write_link_row(sqlite3_stmt *stmt) {
     int ndx = 9;

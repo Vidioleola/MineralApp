@@ -5,11 +5,6 @@
 #include "addtodb.hpp"
 #include "utils.h"
 
-#include <wx/wxprec.h>
-#ifndef WX_PRECOMP
-    #include <wx/wx.h>
-#endif
-
 static std::vector<std::string> data_header = {
     "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
     "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
@@ -108,7 +103,10 @@ bool export_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
     /* Write all data */
     while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
         for (i=0; i<63; i++) {
-            csvfile << "\"" << str_escape(wxString(sqlite3_column_text(stmt, i), wxConvUTF8).ToStdString(), '"', '"') << "\"";
+            const unsigned char *uc = sqlite3_column_text(stmt, i);
+            std::string s = "";
+            if (uc!=NULL) s = (const char*)uc;
+            csvfile << "\"" << str_escape(s, '"', '"') << "\"";
             if (i+1!=63) csvfile << ",";
         }
         csvfile << std::endl;

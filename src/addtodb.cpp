@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <sqlite3.h> 
 

@@ -48,7 +48,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>VERSION_MAJOR="2";VERSION_MINOR="0";VERSION_PATCH="10";VERSION="2.0.10";WXUSINGDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VERSION_MAJOR="2";VERSION_MINOR="0";VERSION_PATCH="11";VERSION="2.0.11";WXUSINGDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -64,12 +64,17 @@
     <ClCompile Include="..\src\mainframe.cpp" />
     <ClCompile Include="..\src\addmodframe.cpp" />
     <ClCompile Include="..\src\utils.cpp" />
+    <ClCompile Include="..\src\addtodb.cpp" />
+    <ClCompile Include="..\src\csv.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\mainframe.h" />
     <ClInclude Include="..\src\addmodframe.h" />
     <ClInclude Include="..\src\utils.h" />
     <ClInclude Include="..\src\filesystem.hpp" />
+    <ClInclude Include="..\src\addtodb.hpp" />
+    <ClInclude Include="..\src\csv.hpp" />
+    <ClInclude Include="..\src\parsecsv.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

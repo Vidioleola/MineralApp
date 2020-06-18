@@ -19,7 +19,7 @@
 class MainFrame: public wxFrame {
     public:
         MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-        void populate_listbox(std::string searchstr="");
+        void populate_listbox();
         void draw_mineral_view(int uid);
     private:
         wxListBox *mineral_listbox;

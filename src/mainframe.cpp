@@ -694,13 +694,13 @@ void MainFrame::db_initialize() {
 }
 
 void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
-    wxString searchstr = mineral_search->GetValue();
-    populate_listbox(str_tolower(searchstr.ToStdString()));
+    populate_listbox();
 }
 
-void MainFrame::populate_listbox(std::string searchstr) {
+void MainFrame::populate_listbox() {
     mineral_listbox->Clear();
     int orderby = mineral_orderby->GetSelection();
+    std::string searchstr = str_tolower(mineral_search->GetValue().ToStdString());
     const char *query;
     if (orderby==1) {
         query = "SELECT MINID,NAME FROM MINERALS ORDER BY NAME";

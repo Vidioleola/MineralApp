@@ -18,9 +18,9 @@ class MineralApp: public wxApp {
 wxIMPLEMENT_APP(MineralApp);
 
 bool MineralApp::OnInit() {
-    MainFrame *frame = new MainFrame("MineralApp v" VERSION, wxDefaultPosition, wxSize(800,600) );
-    frame->Maximize(true);
-    frame->Show(true);
+    MainFrame *frame = new MainFrame("MineralApp v" VERSION, wxDefaultPosition, wxDefaultSize);
+    frame->Maximize();
+    frame->Show();
     return true;
 }
 

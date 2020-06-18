@@ -20,7 +20,7 @@ wxEND_EVENT_TABLE()
 
 
 AddModFrame::AddModFrame(MainFrame *parent, const wxString& title, sqlite3 *maindb, int uid)
-        : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(1000,800), wxDEFAULT_FRAME_STYLE|wxFRAME_FLOAT_ON_PARENT) {
+        : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(1000,600), wxDEFAULT_FRAME_STYLE) {
 
     /* Initialize... */
     db = maindb;

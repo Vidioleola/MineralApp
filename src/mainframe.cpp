@@ -97,10 +97,10 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxBoxSizer *leftvsizer = new wxBoxSizer(wxVERTICAL);
     leftvsizer->Add(mineral_listbox, 1, wxEXPAND | wxALL, 5);
     leftvsizer->Add(leftgrid, 0, wxEXPAND | wxALL, 5);
-    leftvsizer->SetSizeHints(this);
-    hsizer->Add(leftvsizer, 1, wxEXPAND | wxALL, 5);
-    hsizer->Add(mineral_view, 5, wxEXPAND | wxALL, 5);
-    hsizer->SetSizeHints(this);
+    //leftvsizer->SetSizeHints(this);
+    hsizer->Add(leftvsizer, 0, wxEXPAND | wxALL, 5);
+    hsizer->Add(mineral_view, 1, wxEXPAND | wxALL, 5);
+    //hsizer->SetSizeHints(this);
     SetSizerAndFit(hsizer);
     /* Read config file */
     read_config();

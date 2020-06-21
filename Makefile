@@ -39,7 +39,7 @@ CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MIN
 
 # Compile source code, make mineralapp executable
 mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/utils.o src/addtodb.o src/csv.o 
-	$(CXX) $(LDFLAGS) src/app.o src/mainframe.o src/addmodframe.o src/utils.o src/addtodb.o src/csv.o -o mineralapp
+	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/utils.o src/addtodb.o src/csv.o $(LDFLAGS) -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
 src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h

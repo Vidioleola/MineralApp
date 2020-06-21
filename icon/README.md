@@ -19,6 +19,7 @@ The lowres is used for 16px and 32px, hires for all the other:
 
  - `convert mineralapp-lowres.png -resize 16x16 mineralapp-16.png`
  - `convert mineralapp-lowres.png -resize 32x32 mineralapp-32.png`
+ - `convert mineralapp-hires.png -resize 48x48 mineralapp-64.png`
  - `convert mineralapp-hires.png -resize 64x64 mineralapp-64.png`
  - `convert mineralapp-hires.png -resize 128x128 mineralapp-128.png`
  - `convert mineralapp-hires.png -resize 196x196 mineralapp-196.png`

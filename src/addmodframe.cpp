@@ -12,6 +12,8 @@
 #include "mainframe.h"
 #include "addmodframe.h"
 #include "addtodb.hpp"
+#include "utils.h"
+
 
 wxBEGIN_EVENT_TABLE(AddModFrame, wxFrame)
     EVT_BUTTON(ID_AddMod_Save, AddModFrame::OnSave)
@@ -302,6 +304,7 @@ AddModFrame::AddModFrame(MainFrame *parent, const wxString& title, sqlite3 *main
 void AddModFrame::OnSave(wxCommandEvent& event) {
 
     std::vector<std::string> data;
+    std::string temp;
 
     data.push_back(entry_minid->GetValue().ToStdString());
 
@@ -316,7 +319,8 @@ void AddModFrame::OnSave(wxCommandEvent& event) {
 
     data.push_back(entry_s1_species->GetValue().ToStdString());
     data.push_back(entry_s1_class->GetValue().ToStdString());
-    data.push_back(entry_s1_chemf->GetValue().ToStdString());
+    temp = entry_s1_chemf->GetValue().ToStdString();
+    data.push_back(strip_unicode(temp));
     data.push_back(entry_s1_color->GetValue().ToStdString());
     data.push_back(entry_s1_flsw->GetValue().ToStdString());
     data.push_back(entry_s1_flmw->GetValue().ToStdString());
@@ -330,7 +334,8 @@ void AddModFrame::OnSave(wxCommandEvent& event) {
 
     data.push_back(entry_s2_species->GetValue().ToStdString());
     data.push_back(entry_s2_class->GetValue().ToStdString());
-    data.push_back(entry_s2_chemf->GetValue().ToStdString());
+    temp = entry_s2_chemf->GetValue().ToStdString();
+    data.push_back(strip_unicode(temp));
     data.push_back(entry_s2_color->GetValue().ToStdString());
     data.push_back(entry_s2_flsw->GetValue().ToStdString());
     data.push_back(entry_s2_flmw->GetValue().ToStdString());
@@ -344,7 +349,8 @@ void AddModFrame::OnSave(wxCommandEvent& event) {
 
     data.push_back(entry_s3_species->GetValue().ToStdString());
     data.push_back(entry_s3_class->GetValue().ToStdString());
-    data.push_back(entry_s3_chemf->GetValue().ToStdString());
+    temp = entry_s3_chemf->GetValue().ToStdString();
+    data.push_back(strip_unicode(temp));
     data.push_back(entry_s3_color->GetValue().ToStdString());
     data.push_back(entry_s3_flsw->GetValue().ToStdString());
     data.push_back(entry_s3_flmw->GetValue().ToStdString());
@@ -358,7 +364,8 @@ void AddModFrame::OnSave(wxCommandEvent& event) {
 
     data.push_back(entry_s4_species->GetValue().ToStdString());
     data.push_back(entry_s4_class->GetValue().ToStdString());
-    data.push_back(entry_s4_chemf->GetValue().ToStdString());
+    temp = entry_s4_chemf->GetValue().ToStdString();
+    data.push_back(strip_unicode(temp));
     data.push_back(entry_s4_color->GetValue().ToStdString());
     data.push_back(entry_s4_flsw->GetValue().ToStdString());
     data.push_back(entry_s4_flmw->GetValue().ToStdString());

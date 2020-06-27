@@ -51,3 +51,14 @@ std::string str_tolower(std::string s) {
     return s;
 }
 
+/*
+    Remove all unicode from a string.
+*/
+static bool invalid_char(char c) {
+    return c<0;
+}
+std::string strip_unicode(std::string &str) {
+    str.erase(remove_if(str.begin(),str.end(), invalid_char), str.end());
+    return str;
+}
+

@@ -467,7 +467,10 @@ void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
     }
 }
 
-static int write_chemf(wxRichTextCtrl *r, wxString chemf) {
+static int write_chemf(wxRichTextCtrl *r, wxString chemfwx) {
+
+    std::string chemf = chemfwx.ToStdString();
+    strip_unicode(chemf);
 
     if (chemf=="") return 0;
 

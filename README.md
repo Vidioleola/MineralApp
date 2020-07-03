@@ -15,9 +15,13 @@ License and Copyright
 
 &copy; 2019-2020 Simone Conti - https://3dz2.com/mineralapp
 
+Postcardware
+
 You are free to use this software. If you like it and find it useful, I would
 highly appreciate you sending me a postcard (or a mineral!) from your hometown.
 You can find my current address on my website: https://3dz2.com/contact
+
+GPL v3.0+
 
 MineralApp is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software

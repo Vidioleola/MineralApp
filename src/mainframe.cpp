@@ -467,7 +467,12 @@ void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
     }
 }
 
-static int write_chemf(wxRichTextCtrl *r, wxString chemfwx) {
+/*
+    All the subsup mess here is because "monospace" is not monospace when subscripts or
+    superscripts are used. These occupy approximately (?) 1/3 of the space normally
+    used.
+*/
+static int write_chemf(wxRichTextCtrl *r, wxString chemfwx, int *subsup) {
 
     std::string chemf = chemfwx.ToStdString();
     strip_unicode(chemf);
@@ -476,12 +481,11 @@ static int write_chemf(wxRichTextCtrl *r, wxString chemfwx) {
 
     int inserted = 0;
     bool subscript = true;
-    int subsup = 0;
 
     if (chemf.find(" . ")!=std::string::npos) {
         chemf = chemf.replace(chemf.find(" . "), 3, "*");
     }
-    for (int n=0; n<chemf.length(); n++) {
+    for (size_t n=0; n<chemf.length(); n++) {
         char tchar = chemf[n];
         char nchar = 0;
         if (n<chemf.length()-1) {
@@ -492,16 +496,21 @@ static int write_chemf(wxRichTextCtrl *r, wxString chemfwx) {
             r->SetSelection(r->GetCaretPosition(), r->GetCaretPosition()+1);
             r->ApplyTextEffectToSelection(wxTEXT_ATTR_EFFECT_SUPERSCRIPT);
             r->SetSelection(0,0);
-            subsup++;
+            (*subsup)++;
         } else if ((isdigit(tchar) || tchar=='.') && subscript) {
             r->WriteText(wxString(1,tchar));
             r->SetSelection(r->GetCaretPosition(), r->GetCaretPosition()+1);
             r->ApplyTextEffectToSelection(wxTEXT_ATTR_EFFECT_SUBSCRIPT);
             r->SetSelection(0,0);
-            subsup++;
+            (*subsup)++;
         } else if (tchar=='*') {
-            r->WriteText("\u30fb");
+            //r->WriteText("\u00b7");   /* Does not work on Ubuntu :( */
+            r->WriteText(wxString(1,'.'));
+            r->SetSelection(r->GetCaretPosition(), r->GetCaretPosition()+1);
+            r->ApplyTextEffectToSelection(wxTEXT_ATTR_EFFECT_SUPERSCRIPT);
+            r->SetSelection(0,0);
             subscript = false;
+            (*subsup)++;
         } else {
             r->WriteText(wxString(1,tchar));
             if (isalpha(tchar)) {
@@ -510,8 +519,6 @@ static int write_chemf(wxRichTextCtrl *r, wxString chemfwx) {
         }
         inserted++;
     }
-
-    for (int i=0; i<subsup/3; i++) r->WriteText(" ");
 
     return inserted;
 }
@@ -531,16 +538,30 @@ void MainFrame::write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx
     int l2 = s2.length();
     int l3 = s3.length();
     int l4 = s4.length();
+    int subsup=0;
     if (l1+l2+l3+l4>0) {
         r->BeginBold(); r->WriteText(name+": "); r->EndBold();
-        l1 = write_chemf(r, s1); r->WriteText(std::string(guess_column_width(stmt, 0)-l1, ' '));
-        if (l2+l3+l4>0) {l2 = write_chemf(r, s2); r->WriteText(std::string(guess_column_width(stmt, 1)-l2, ' '));}
-        if (l3+l4>0) {l3 = write_chemf(r, s3); r->WriteText(std::string(guess_column_width(stmt, 2)-l3, ' '));}
-        if (l4>0) {l4 = write_chemf(r, s4); r->WriteText(std::string(guess_column_width(stmt, 3)-l4, ' '));}
+        l1 = write_chemf(r, s1, &subsup);
+        r->WriteText(std::string(guess_column_width(stmt, 0)-l1+(int)(subsup/3), ' '));
+        subsup-=3*(int)(subsup/3);
+        if (l2+l3+l4>0) {
+            l2 = write_chemf(r, s2, &subsup);
+            r->WriteText(std::string(guess_column_width(stmt, 1)-l2+(int)(subsup/3), ' '));
+            subsup-=3*(int)(subsup/3);
+        }
+        if (l3+l4>0) {
+            l3 = write_chemf(r, s3, &subsup);
+            r->WriteText(std::string(guess_column_width(stmt, 2)-l3+(int)(subsup/3), ' '));
+            subsup-=3*(int)(subsup/3);
+        }
+        if (l4>0) {
+            l4 = write_chemf(r, s4, &subsup);
+            r->WriteText(std::string(guess_column_width(stmt, 3)-l4+(int)(subsup/3), ' '));
+            subsup-=3*(int)(subsup/3);
+        }
         r->Newline();
     }
 }
-
 
 
 void MainFrame::write_link_row(sqlite3_stmt *stmt) {

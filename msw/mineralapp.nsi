@@ -18,6 +18,13 @@ InstallDir "$PROGRAMFILES\MineralApp"
 
 !insertmacro MUI_LANGUAGE "English"
 
+Section "Visual Studio Runtime"
+  SetOutPath "$INSTDIR"
+  File "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Redist\MSVC\v142\vcredist_x86.exe"
+  ExecWait '"$INSTDIR\vcredist_x86.exe /q"'
+  Delete "$INSTDIR\vcredist_x86.exe"
+SectionEnd
+
 Section
     SetOutPath $INSTDIR
     File Release\mineralapp.exe

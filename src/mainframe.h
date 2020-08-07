@@ -22,6 +22,10 @@ class MainFrame: public wxFrame {
         void populate_listbox();
         void draw_mineral_view(int uid);
     private:
+        wxMenu *menuFile;
+        wxMenu *menuMineral;
+        wxMenu *menuHelp;
+        wxMenuBar *menuBar;
         wxListBox *mineral_listbox;
         wxTextCtrl *mineral_search;
         wxRadioBox *mineral_orderby;
@@ -66,5 +70,6 @@ enum {
     ID_OrderByMineral,
     ID_ExportCSV,
     ID_ImportCSV,
+    ID_HIDEVALUE,
 };
 

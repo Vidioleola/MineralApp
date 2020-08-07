@@ -48,7 +48,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxImage::AddHandler(new wxGIFHandler);
     wxImage::AddHandler(new wxTIFFHandler);
     /* Menu Bar */
-    wxMenu *menuFile = new wxMenu;
+    menuFile = new wxMenu;
     menuFile->Append(wxID_OPEN);
     menuFile->Append(wxID_SAVE);
     menuFile->Append(wxID_CLOSE);
@@ -56,15 +56,17 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuFile->Append(ID_ExportCSV, "&Export CSV", "Export mineral database as CSV file");
     menuFile->AppendSeparator();
     menuFile->Append(wxID_EXIT);
-    wxMenu *menuMineral = new wxMenu;
+    menuMineral = new wxMenu;
     menuMineral->Append(ID_NewMineral, "&Add", "Add a new mineral to the database");
     menuMineral->Append(ID_ModifyMineral, "&Modify", "Modify the selected mineral");
     menuMineral->Append(ID_DuplicateMineral, "&Duplicate", "Duplicate the selected mineral");
     menuMineral->Append(ID_DeleteMineral, "&Delete", "Delete the selected mineral");
-    wxMenu *menuHelp = new wxMenu;
+    menuMineral->AppendSeparator();
+    menuMineral->AppendCheckItem(ID_HIDEVALUE, "&Hide mineral value");
+    menuHelp = new wxMenu;
     menuHelp->Append(wxID_ABOUT);
     menuHelp->Append(wxID_HELP, "&Read the manual online", "Open the MineralApp manual on the browser");
-    wxMenuBar *menuBar = new wxMenuBar;
+    menuBar = new wxMenuBar;
     menuBar->Append(menuFile, "&File" );
     menuBar->Append(menuMineral, "&Mineral" );
     menuBar->Append(menuHelp, "&Help" );
@@ -391,7 +393,12 @@ void MainFrame::draw_mineral_view(int minid) {
     r->BeginBold(); r->WriteText("Weight         : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
     r->BeginBold(); r->WriteText("Acquisition    : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
     r->BeginBold(); r->WriteText("Collection     : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
-    r->BeginBold(); r->WriteText("Value          : "); r->EndBold(); if (value.length()>0) r->WriteText(value); r->Newline();
+    r->BeginBold(); r->WriteText("Value          : "); r->EndBold();
+    if (menuMineral->IsChecked(ID_HIDEVALUE)) {
+        r->WriteText("<hidden>"); r->Newline();
+    } else {
+        if (value.length()>0) r->WriteText(value); r->Newline();
+    }
     r->Newline();
 
     /* Table of species */

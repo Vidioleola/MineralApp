@@ -19,7 +19,7 @@
 class MainFrame: public wxFrame {
     public:
         MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-        void populate_listbox();
+        void update_gui();
         void draw_mineral_view(int uid);
     private:
         wxMenu *menuFile;
@@ -29,6 +29,7 @@ class MainFrame: public wxFrame {
         wxListBox *mineral_listbox;
         wxTextCtrl *mineral_search;
         wxRadioBox *mineral_orderby;
+        wxChoice *mineral_country;
         wxRichTextCtrl *mineral_view;
         void OnNewMineral(wxCommandEvent& event);
         void OnModifyMineral(wxCommandEvent& event);
@@ -57,6 +58,8 @@ class MainFrame: public wxFrame {
         fs::path get_config_dirname();
         void read_config();
         void write_config();
+        void populate_listbox();
+        void populate_country_filter();
         wxDECLARE_EVENT_TABLE();
     };
 
@@ -68,6 +71,7 @@ enum {
     ID_SelectMineral,
     ID_SearchMineral,
     ID_OrderByMineral,
+    ID_FilterCountry,
     ID_ExportCSV,
     ID_ImportCSV,
     ID_HIDEVALUE,

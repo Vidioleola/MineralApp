@@ -18,6 +18,7 @@
 #include "addmodframe.h"
 #include "utils.h"
 #include "csv.hpp"
+#include "addtodb.hpp"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)
@@ -35,6 +36,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_LISTBOX(ID_SelectMineral, MainFrame::OnSelectMineral)
     EVT_TEXT(ID_SearchMineral, MainFrame::populate_listbox_evt)
     EVT_RADIOBOX(ID_OrderByMineral, MainFrame::populate_listbox_evt)
+    EVT_CHOICE(ID_FilterCountry, MainFrame::populate_listbox_evt)
     EVT_TEXT_URL(wxID_ANY, MainFrame::OnURL)
 wxEND_EVENT_TABLE()
 
@@ -85,6 +87,9 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     orderby_choices.Add("Unique ID");
     orderby_choices.Add("Name");
     mineral_orderby = new wxRadioBox(this, ID_OrderByMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, orderby_choices, 2, wxRA_HORIZONTAL);
+    /* Country filter */
+    wxStaticText *mineral_country_label = new wxStaticText(this, -1, "Country:");
+    mineral_country = new wxChoice(this, ID_FilterCountry, wxDefaultPosition, wxDefaultSize, 0, NULL);
     /* Grid sizer */
     wxFlexGridSizer *leftgrid = new wxFlexGridSizer(2,0,0);
     leftgrid->AddGrowableCol(1,1);
@@ -92,6 +97,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     leftgrid->Add(mineral_search,        1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     leftgrid->Add(mineral_orderby_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     leftgrid->Add(mineral_orderby,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_country_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_country,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     /* Viewbox */
     mineral_view = new wxRichTextCtrl(this, -1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY, wxDefaultValidator, wxTextCtrlNameStr);
     /* Sizers */
@@ -157,7 +164,7 @@ void MainFrame::open_dbfile(std::string fname) {
     /* Store info */
     db_file_path = fs::path(fname);
     write_config();
-    populate_listbox();
+    update_gui();
 
     return;
 }
@@ -287,7 +294,7 @@ void MainFrame::OnDuplicateMineral(wxCommandEvent& event) {
         sqlite3_free(errmsg);
         return;
     }
-    populate_listbox();
+    update_gui();
     wxLogMessage("Mineral duplicated!");
 }
 
@@ -306,7 +313,7 @@ void MainFrame::OnDeleteMineral(wxCommandEvent& event) {
         sqlite3_free(errmsg);
         return;
     }
-    populate_listbox();
+    update_gui();
     mineral_view->Clear();
 }
 
@@ -729,14 +736,21 @@ void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
 }
 
 void MainFrame::populate_listbox() {
+
     mineral_listbox->Clear();
     int orderby = mineral_orderby->GetSelection();
     std::string searchstr = str_tolower(mineral_search->GetValue().ToStdString());
+    int country_id = mineral_country->GetSelection();
+    wxString country;
+    if (country_id!=wxNOT_FOUND) {
+        country = mineral_country->GetString(country_id);
+    }
+    if (country=="Any") country="";
     const char *query;
     if (orderby==1) {
-        query = "SELECT MINID,NAME FROM MINERALS ORDER BY NAME";
+        query = "SELECT MINID,NAME,LOCALITY FROM MINERALS ORDER BY NAME";
     } else {
-        query = "SELECT MINID,NAME FROM MINERALS ORDER BY MINID";
+        query = "SELECT MINID,NAME,LOCALITY FROM MINERALS ORDER BY MINID";
     }
     int ret;
     sqlite3_stmt *stmt;
@@ -747,7 +761,9 @@ void MainFrame::populate_listbox() {
     }
     while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
         wxString name = wxString(sqlite3_column_text(stmt, 1), wxConvUTF8) + wxString(" [") + wxString(sqlite3_column_text(stmt, 0), wxConvUTF8) + wxString("]");
-        if (str_tolower(name.ToStdString()).find(searchstr)!=std::string::npos) {
+        wxString locality = wxString(sqlite3_column_text(stmt, 2), wxConvUTF8);
+        if (str_tolower(name.ToStdString()).find(searchstr)!=std::string::npos && 
+                locality.find(country)!=std::string::npos) {
             mineral_listbox->Append(name);
         }
     }
@@ -755,9 +771,26 @@ void MainFrame::populate_listbox() {
         wxLogMessage("error: ", sqlite3_errmsg(db));
     }
     sqlite3_finalize(stmt);
+
     return;
 }
 
+void MainFrame::populate_country_filter() {
+    mineral_country->Clear();
+    mineral_country->Append("Any");
+    std::string errmsg = "";
+    std::vector<std::string> countries = db_get_country_list(db, &errmsg);
+    for(const auto& value: countries) {
+        mineral_country->Append(value);
+    }
+    return;
+}
+
+void MainFrame::update_gui() {
+    populate_country_filter();
+    populate_listbox();
+    return;
+}
 
 void MainFrame::import_csv(wxCommandEvent& event) {
     /* Check if some db is already opened and warn the user */
@@ -782,7 +815,7 @@ void MainFrame::import_csv(wxCommandEvent& event) {
     if (!success) {
         wxLogMessage(wxString("Import failed! ") + errmsg);
     }
-    populate_listbox();
+    update_gui();
 }
 
 void MainFrame::export_csv(wxCommandEvent& event) {

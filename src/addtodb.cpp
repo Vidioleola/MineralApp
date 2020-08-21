@@ -86,3 +86,39 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
     return minid_new;
 }
 
+std::vector<std::string> db_get_country_list(sqlite3 *db, std::string *errmsg) {
+
+    std::vector<std::string> loclst;
+    const char *query = "SELECT LOCALITY FROM MINERALS";
+    int ret;
+    sqlite3_stmt *stmt;
+    ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    if (ret!=SQLITE_OK) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+        return loclst;
+    }
+    std::string loc = "";
+    std::string country = "";
+    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
+        const unsigned char *uc = sqlite3_column_text(stmt, 0);
+        loc = "";
+        if (uc!=NULL) loc = (const char*)uc;
+        if (loc.length()==0) continue;
+        size_t pos = loc.rfind(", ");
+        if (pos==std::string::npos) {
+            country = loc;
+        } else {
+            country = loc.substr(pos+2, std::string::npos);
+        }
+        if (std::find(loclst.begin(), loclst.end(), country) == loclst.end()) {
+            loclst.push_back(country);
+        }
+    }
+    if (ret!=SQLITE_DONE) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+    }
+    sqlite3_finalize(stmt);
+    std::sort(loclst.begin(), loclst.end());
+    return loclst;
+}
+

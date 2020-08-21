@@ -386,7 +386,7 @@ void AddModFrame::OnSave(wxCommandEvent& event) {
         wxLogMessage(wxString(errmsg));
     }
 
-    main_window->populate_listbox();
+    main_window->update_gui();
     main_window->draw_mineral_view(success_id);
     Close(true);
     return;

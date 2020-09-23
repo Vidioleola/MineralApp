@@ -122,3 +122,35 @@ std::vector<std::string> db_get_country_list(sqlite3 *db, std::string *errmsg) {
     return loclst;
 }
 
+
+std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg) {
+
+    std::vector<std::string> specieslst;
+    const char *query = "SELECT S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS";
+    int ret;
+    sqlite3_stmt *stmt;
+    ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    if (ret!=SQLITE_OK) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+        return specieslst;
+    }
+    std::string species = "";
+    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
+        for (int i=0; i<4; i++) {
+            const unsigned char *uc = sqlite3_column_text(stmt, i);
+            species = "";
+            if (uc!=NULL) species = (const char*)uc;
+            if (species.length()==0) continue;
+            if (std::find(specieslst.begin(), specieslst.end(), species) == specieslst.end()) {
+                specieslst.push_back(species);
+            }
+        }
+    }
+    if (ret!=SQLITE_DONE) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+    }
+    sqlite3_finalize(stmt);
+    std::sort(specieslst.begin(), specieslst.end());
+    return specieslst;
+}
+

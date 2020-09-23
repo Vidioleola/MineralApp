@@ -37,6 +37,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_TEXT(ID_SearchMineral, MainFrame::populate_listbox_evt)
     EVT_RADIOBOX(ID_OrderByMineral, MainFrame::populate_listbox_evt)
     EVT_CHOICE(ID_FilterCountry, MainFrame::populate_listbox_evt)
+    EVT_CHOICE(ID_FilterSpecies, MainFrame::populate_listbox_evt)
     EVT_TEXT_URL(wxID_ANY, MainFrame::OnURL)
 wxEND_EVENT_TABLE()
 
@@ -90,15 +91,20 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     /* Country filter */
     wxStaticText *mineral_country_label = new wxStaticText(this, -1, "Country:");
     mineral_country = new wxChoice(this, ID_FilterCountry, wxDefaultPosition, wxDefaultSize, 0, NULL);
+    /* Species filter */
+    wxStaticText *mineral_species_label = new wxStaticText(this, -1, "Species:");
+    mineral_species = new wxChoice(this, ID_FilterSpecies, wxDefaultPosition, wxDefaultSize, 0, NULL);
     /* Grid sizer */
     wxFlexGridSizer *leftgrid = new wxFlexGridSizer(2,0,0);
     leftgrid->AddGrowableCol(1,1);
     leftgrid->Add(mineral_search_label,  0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     leftgrid->Add(mineral_search,        1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    leftgrid->Add(mineral_orderby_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    leftgrid->Add(mineral_orderby,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     leftgrid->Add(mineral_country_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     leftgrid->Add(mineral_country,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_species_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_species,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_orderby_label, 0, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    leftgrid->Add(mineral_orderby,       1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     /* Viewbox */
     mineral_view = new wxRichTextCtrl(this, -1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY, wxDefaultValidator, wxTextCtrlNameStr);
     /* Sizers */
@@ -738,19 +744,29 @@ void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
 void MainFrame::populate_listbox() {
 
     mineral_listbox->Clear();
+
     int orderby = mineral_orderby->GetSelection();
     std::string searchstr = str_tolower(mineral_search->GetValue().ToStdString());
+
     int country_id = mineral_country->GetSelection();
     wxString country;
     if (country_id!=wxNOT_FOUND) {
         country = mineral_country->GetString(country_id);
     }
     if (country=="Any") country="";
+
+    int species_id = mineral_species->GetSelection();
+    wxString species;
+    if (species_id!=wxNOT_FOUND) {
+        species = mineral_species->GetString(species_id);
+    }
+    if (species=="Any") species="";
+
     const char *query;
     if (orderby==1) {
-        query = "SELECT MINID,NAME,LOCALITY FROM MINERALS ORDER BY NAME";
+        query = "SELECT MINID,NAME,LOCALITY,S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS ORDER BY NAME";
     } else {
-        query = "SELECT MINID,NAME,LOCALITY FROM MINERALS ORDER BY MINID";
+        query = "SELECT MINID,NAME,LOCALITY,S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS ORDER BY MINID";
     }
     int ret;
     sqlite3_stmt *stmt;
@@ -762,8 +778,13 @@ void MainFrame::populate_listbox() {
     while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
         wxString name = wxString(sqlite3_column_text(stmt, 1), wxConvUTF8) + wxString(" [") + wxString(sqlite3_column_text(stmt, 0), wxConvUTF8) + wxString("]");
         wxString locality = wxString(sqlite3_column_text(stmt, 2), wxConvUTF8);
+        wxString specieses = wxString(sqlite3_column_text(stmt, 3), wxConvUTF8) + 
+                             wxString(sqlite3_column_text(stmt, 4), wxConvUTF8) +
+                             wxString(sqlite3_column_text(stmt, 5), wxConvUTF8) +
+                             wxString(sqlite3_column_text(stmt, 6), wxConvUTF8);
         if (str_tolower(name.ToStdString()).find(searchstr)!=std::string::npos && 
-                locality.find(country)!=std::string::npos) {
+                locality.find(country)!=std::string::npos &&
+                specieses.find(species)!=std::string::npos) {
             mineral_listbox->Append(name);
         }
     }
@@ -786,8 +807,21 @@ void MainFrame::populate_country_filter() {
     return;
 }
 
+void MainFrame::populate_species_filter() {
+    mineral_species->Clear();
+    mineral_species->Append("Any");
+    std::string errmsg = "";
+    std::vector<std::string> species = db_get_species_list(db, &errmsg);
+    for(const auto& value: species) {
+        mineral_species->Append(value);
+    }
+    return;
+}
+
+
 void MainFrame::update_gui() {
     populate_country_filter();
+    populate_species_filter();
     populate_listbox();
     return;
 }

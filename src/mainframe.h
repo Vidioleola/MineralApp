@@ -30,6 +30,7 @@ class MainFrame: public wxFrame {
         wxTextCtrl *mineral_search;
         wxRadioBox *mineral_orderby;
         wxChoice *mineral_country;
+        wxChoice *mineral_species;
         wxRichTextCtrl *mineral_view;
         void OnNewMineral(wxCommandEvent& event);
         void OnModifyMineral(wxCommandEvent& event);
@@ -60,6 +61,7 @@ class MainFrame: public wxFrame {
         void write_config();
         void populate_listbox();
         void populate_country_filter();
+        void populate_species_filter();
         wxDECLARE_EVENT_TABLE();
     };
 
@@ -72,6 +74,7 @@ enum {
     ID_SearchMineral,
     ID_OrderByMineral,
     ID_FilterCountry,
+    ID_FilterSpecies,
     ID_ExportCSV,
     ID_ImportCSV,
     ID_HIDEVALUE,

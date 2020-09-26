@@ -37,6 +37,7 @@ class MainFrame: public wxFrame {
         void OnDuplicateMineral(wxCommandEvent& event);
         void OnDeleteMineral(wxCommandEvent& event);
         void OnSelectMineral(wxCommandEvent& event);
+        void OnGenReport(wxCommandEvent& event);
         void OnOpen(wxCommandEvent& event);
         void OnSave(wxCommandEvent& event);
         void OnClose(wxCommandEvent& event);
@@ -54,7 +55,7 @@ class MainFrame: public wxFrame {
         void write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx);
         void write_link_row(sqlite3_stmt *stmt);
         void ReadData(std::string uid);
-        int get_minid_from_listbox();
+        int get_minid_from_listbox(bool warn=true);
         std::string db_file_path;
         fs::path get_config_dirname();
         void read_config();
@@ -78,5 +79,6 @@ enum {
     ID_ExportCSV,
     ID_ImportCSV,
     ID_HIDEVALUE,
+    ID_GenReport,
 };
 

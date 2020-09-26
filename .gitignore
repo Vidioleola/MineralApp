@@ -1,9 +1,4 @@
-src/addmodframe.o
-src/app.o
-src/mainframe.o
-src/utils.o
-src/addtodb.o
-src/csv.o
+src/*.o
 .DS_Store
 MineralApp.app/
 .vs/

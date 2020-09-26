@@ -16,6 +16,7 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
+#include "genreportframe.h"
 #include "utils.h"
 #include "csv.hpp"
 #include "addtodb.hpp"
@@ -27,6 +28,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ModifyMineral,    MainFrame::OnModifyMineral)
     EVT_MENU(ID_DuplicateMineral, MainFrame::OnDuplicateMineral)
     EVT_MENU(ID_DeleteMineral,    MainFrame::OnDeleteMineral)
+    EVT_MENU(ID_GenReport,        MainFrame::OnGenReport)
     EVT_MENU(wxID_OPEN,  MainFrame::OnOpen)
     EVT_MENU(wxID_SAVE,  MainFrame::OnSave)
     EVT_MENU(wxID_CLOSE, MainFrame::OnClose)
@@ -66,6 +68,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     menuMineral->Append(ID_DeleteMineral, "&Delete", "Delete the selected mineral");
     menuMineral->AppendSeparator();
     menuMineral->AppendCheckItem(ID_HIDEVALUE, "&Hide mineral value");
+    menuMineral->Append(ID_GenReport, "&Generate printable report");
     menuHelp = new wxMenu;
     menuHelp->Append(wxID_ABOUT);
     menuHelp->Append(wxID_HELP, "&Read the manual online", "Open the MineralApp manual on the browser");
@@ -112,10 +115,8 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxBoxSizer *leftvsizer = new wxBoxSizer(wxVERTICAL);
     leftvsizer->Add(mineral_listbox, 1, wxEXPAND | wxALL, 5);
     leftvsizer->Add(leftgrid, 0, wxEXPAND | wxALL, 5);
-    //leftvsizer->SetSizeHints(this);
     hsizer->Add(leftvsizer, 0, wxEXPAND | wxALL, 5);
     hsizer->Add(mineral_view, 1, wxEXPAND | wxALL, 5);
-    //hsizer->SetSizeHints(this);
     SetSizerAndFit(hsizer);
     /* Read config file */
     read_config();
@@ -258,11 +259,11 @@ void MainFrame::OnNewMineral(wxCommandEvent& event) {
     frame->Show();
 }
 
-int MainFrame::get_minid_from_listbox() {
+int MainFrame::get_minid_from_listbox(bool warn) {
     int minid;
     int selected = mineral_listbox->GetSelection();
     if (selected==wxNOT_FOUND) {
-        wxLogMessage("Please, select a mineral from the left panel.");
+        if (warn) wxLogMessage("Please, select a mineral from the left panel.");
         return -1;
     }
     wxString label = mineral_listbox->GetString(selected);
@@ -270,7 +271,7 @@ int MainFrame::get_minid_from_listbox() {
     int ndxf = label.rfind(']');
     int ret = sscanf(label.substr(ndxi,ndxf).c_str(), "[%d]", &minid);
     if (ret!=1) {
-        wxLogMessage("Please, select a mineral from the left panel.");
+        if (warn) wxLogMessage("Please, select a mineral from the left panel.");
         return -1;
     }
     return minid;
@@ -639,27 +640,11 @@ void MainFrame::ReadData(std::string uid) {
 
     if (db_file_path.empty()) return;
 
+    std::vector<fs::path> files = db_get_datafile_list(db_file_path, uid);
+
     wxRichTextAttr urlStyle;
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
-
-    fs::path basepath;
-
-    basepath = fs::path(db_file_path).remove_filename() / "data";
-    if (!fs::is_directory(basepath)) return;
-
-    basepath = fs::path(db_file_path).remove_filename() / "data" / uid;
-    if (!fs::is_directory(basepath)) {
-        std::string prefix = uid + " ";
-        basepath = fs::path();
-        for (const auto & entry : fs::directory_iterator(fs::path(db_file_path).remove_filename() / "data")) {
-            if (entry.is_directory() && strncmp(entry.path().filename().c_str(), prefix.c_str(), prefix.size())==0) {
-                basepath = entry.path();
-                break;
-            }
-        }
-        if (basepath.empty()) return;
-    }
 
     std::vector<std::string> formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif" };
     wxRichTextCtrl *r = mineral_view;
@@ -671,15 +656,10 @@ void MainFrame::ReadData(std::string uid) {
     r->Newline();
     r->Newline();
 
-    std::vector<fs::directory_entry> files;
-    std::copy(fs::directory_iterator(basepath), fs::directory_iterator(), std::back_inserter(files));
-    std::sort(files.begin(), files.end());
-
-    for (const auto & entry : files) {
-        if (entry.path().filename().string().at(0) == '.') continue;
-        std::string ext = std::string(entry.path().extension().c_str());
+    for (const auto & path : files) {
+        std::string ext = path.extension().string();
         if (std::find(formats.begin(), formats.end(), ext) != formats.end()) {
-            wxImage image = wxImage(wxString(entry.path().string()));
+            wxImage image = wxImage(wxString(path.string()));
             width = image.GetWidth();
             height = image.GetHeight();
             if (width>400 || height>400) {
@@ -690,10 +670,10 @@ void MainFrame::ReadData(std::string uid) {
             r->WriteImage(image);
         } else {
             r->WriteText("    ");
-            r->WriteText(wxString("file: ")+wxString(entry.path().filename()));
+            r->WriteText(wxString("file: ")+wxString(path.filename()));
         }
         r->WriteText("    ");
-        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(entry.path()));r->WriteText(wxString("Open original"));r->EndURL();r->EndStyle();
+        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(path));r->WriteText(wxString("Open original"));r->EndURL();r->EndStyle();
         r->Newline();
         r->Newline();
     }
@@ -911,6 +891,12 @@ void MainFrame::write_config() {
     configfile.open(fs::path(configdir)/"config.txt");
     configfile << "last_open=" << db_file_path << std::endl;
     configfile.close();
+}
+
+void MainFrame::OnGenReport(wxCommandEvent& event) {
+    int minid = get_minid_from_listbox(false);
+    GenReportFrame *frame = new GenReportFrame(this, "Generate printable report", db, minid, db_file_path);
+    frame->Show();
 }
 
 

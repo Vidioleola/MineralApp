@@ -1,12 +1,3 @@
-
-#include <vector>
-#include <string>
-#include <cstring>
-#include <iostream>
-#include <fstream>
-#include <sqlite3.h> 
-#include "base64.h"
-#include "image.h"
 #include "addtodb.hpp"
 
 static std::vector<std::string> data_header = {
@@ -53,7 +44,7 @@ std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg
         sqlite3_finalize(stmt);
         return data;
     }
-    for (int i=0; i<data_header.size(); i++) {
+    for (size_t i=0; i<data_header.size(); i++) {
         const unsigned char *uc = sqlite3_column_text(stmt, i);
         std::string tmp = "";
         if (uc!=NULL) tmp=(const char*)uc;

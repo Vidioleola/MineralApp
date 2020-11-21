@@ -408,11 +408,9 @@ void MainFrame::draw_mineral_view(int minid) {
     r->BeginBold(); r->WriteText("Acquisition    : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
     r->BeginBold(); r->WriteText("Collection     : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
     r->BeginBold(); r->WriteText("Value          : "); r->EndBold();
-    if (menuMineral->IsChecked(ID_HIDEVALUE)) {
-        r->WriteText("<hidden>"); r->Newline();
-    } else {
-        if (value.length()>0) r->WriteText(value); r->Newline();
-    }
+    if (menuMineral->IsChecked(ID_HIDEVALUE)) r->WriteText("<hidden>");
+    else if (value.length()>0) r->WriteText(value);
+    r->Newline();
     r->Newline();
 
     /* Table of species */

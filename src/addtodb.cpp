@@ -1,28 +1,20 @@
+
 #include "addtodb.hpp"
 
-static std::vector<std::string> data_header = {
-    "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
-    "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
-    "S2_SPECIES", "S2_CLASS", "S2_CHEMF", "S2_COLOR", "S2_FLSW", "S2_FLMW", "S2_FLLW", "S2_FL405", "S2_PHSW", "S2_PHMW", "S2_PHLW", "S2_PH405", "S2_TENEBR",
-    "S3_SPECIES", "S3_CLASS", "S3_CHEMF", "S3_COLOR", "S3_FLSW", "S3_FLMW", "S3_FLLW", "S3_FL405", "S3_PHSW", "S3_PHMW", "S3_PHLW", "S3_PH405", "S3_TENEBR",
-    "S4_SPECIES", "S4_CLASS", "S4_CHEMF", "S4_COLOR", "S4_FLSW", "S4_FLMW", "S4_FLLW", "S4_FL405", "S4_PHSW", "S4_PHMW", "S4_PHLW", "S4_PH405", "S4_TENEBR",
-    "RADIOACT", "COMMENTS"
-};
-
 /* Get the index of a given field from the data_header vector */
-static int db_get_field_index(std::string field) {
+int db_get_field_index(std::string field) {
     auto it = find(data_header.begin(), data_header.end(), field);
     if (it != data_header.end()) return distance(data_header.begin(), it);
     else return -1;
 }
 
 /* Get the field value from the data vector */
-std::string db_get_field(std::vector<std::string> data, std::string field) {
+std::string db_get_field(std::vector<std::string> data, std::string field, bool remove_no) {
     int ndx = db_get_field_index(field);
     if (ndx>=0) {
         std::string tmp = data[ndx];
-        if (tmp!="No") return tmp;
-        else return std::string();
+        if (remove_no && tmp=="No") return std::string();
+        else return tmp;
     }
     else return "ERROR!";
 }
@@ -34,9 +26,15 @@ std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg
         *errmsg += "MINID is negative. It should be positive...";
         return data;
     }
-    const char *query = "SELECT * FROM MINERALS WHERE MINID=?";
+    std::string query = "SELECT ";
+    size_t data_header_size = data_header.size();
+    for (size_t i=0; i<data_header_size; i++) {
+        query += data_header[i];
+        if (i<data_header_size-1) query += ", ";
+    }
+    query += " FROM MINERALS WHERE MINID=?";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
     sqlite3_bind_int(stmt, 1, minid);
     int ret=sqlite3_step(stmt);
     if (ret!=SQLITE_ROW) {
@@ -121,8 +119,9 @@ std::vector<fs::path> db_get_datafile_list(std::string db_file_path, std::string
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg) {
 
     /* Check data vector size */
-    if (data.size()!=63) {
-        *errmsg = std::string("Data should contain 63 items, but is has ") + std::to_string(data.size());
+    size_t data_header_size = data_header.size();
+    if (data.size()!=data_header_size) {
+        *errmsg = std::string("Data should contain ") + std::to_string(data_header_size) + " items, but is has " + std::to_string(data.size());
         return -2;
     }
 
@@ -137,18 +136,18 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
     std::string query = "";
     if (minid_mod>0) {
         query += "UPDATE MINERALS SET ";
-        for (int i=0; i<62; i++) { query += data_header[i] + "=?, "; }
-        query += data_header[62] + "=? ";
+        for (int i=0; i<data_header_size-1; i++) { query += data_header[i] + "=?, "; }
+        query += data_header[data_header_size-1] + "=? ";
         query += "WHERE MINID=?;";
     } else {
         query += "INSERT ";
         if (minid_mod==-2) { query += "OR REPLACE "; }
         query += "INTO MINERALS (";
         if (minid_new>0) { query += "MINID, "; }
-        for (int i=1; i<62; i++) { query += data_header[i] + ", "; }
-        query += data_header[62] + ") ";
+        for (int i=1; i<data_header_size-1; i++) { query += data_header[i] + ", "; }
+        query += data_header[data_header_size-1] + ") ";
         query += "VALUES (";
-        for (int i=1; i<62; i++) { query += "?,"; }
+        for (int i=1; i<data_header_size-1; i++) { query += "?,"; }
         if (minid_new>0) { query += "?,"; }
         query += "?);";
     }
@@ -169,7 +168,7 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
     }
 
     /* Bind all inputs */
-    for (int i=0; i<62; i++) {
+    for (int i=0; i<data_header_size-1; i++) {
         sqlite3_bind_text(stmt, ndx, data[i].c_str(), -1, SQLITE_TRANSIENT); ndx+=1;
     }
     if (minid_mod>=0) {

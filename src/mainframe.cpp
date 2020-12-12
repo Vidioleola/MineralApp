@@ -337,16 +337,9 @@ void MainFrame::draw_mineral_view(int minid) {
     if (minid<0) {
         return;
     }
-    int ret, ndx;
-    const char *query = "SELECT * FROM MINERALS WHERE MINID=?";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
-    sqlite3_bind_int(stmt, 1, minid);
-    ret=sqlite3_step(stmt);
-    if (ret!=SQLITE_ROW) {
-        wxLogMessage("Impossible to find ID in database :(");
-        return;
-    }
+
+    std::string errmsg = "";
+    std::vector<std::string> data = db_get_data(db, minid, &errmsg);
 
     /* Start formatting */
     wxRichTextCtrl *r = mineral_view;
@@ -365,23 +358,21 @@ void MainFrame::draw_mineral_view(int minid) {
 
     /* Title */
     r->BeginFontSize(16);
-    wxString title = wxString(sqlite3_column_text(stmt, 1), wxConvUTF8);
-    r->WriteText(title);
+    r->WriteText(db_get_field(data, "NAME"));
     r->EndFontSize();
     r->Newline();
     r->Newline();
     
     /* ID */
-    wxString uid = wxString(sqlite3_column_text(stmt, 0), wxConvUTF8);
     r->BeginBold();
     r->WriteText("Unique ID      : ");
     r->EndBold();
-    r->WriteText(uid);
+    r->WriteText(db_get_field(data, "MINID"));
     r->Newline();
 
     /* Locality */
-    wxString locality = wxString(sqlite3_column_text(stmt, 2), wxConvUTF8);
-    wxString locid = wxString(sqlite3_column_text(stmt, 3), wxConvUTF8);
+    wxString locality = db_get_field(data, "LOCALITY");
+    wxString locid = db_get_field(data, "LOCID_MNDAT");
     r->BeginBold();
     r->WriteText("Locality       : ");
     r->EndBold();
@@ -398,11 +389,11 @@ void MainFrame::draw_mineral_view(int minid) {
     r->Newline();
     
     /* Size, weight, acquisition, collection value */
-    wxString size = wxString(sqlite3_column_text(stmt, 4), wxConvUTF8);
-    wxString weight = wxString(sqlite3_column_text(stmt, 5), wxConvUTF8);
-    wxString acquisition = wxString(sqlite3_column_text(stmt, 6), wxConvUTF8);
-    wxString collection = wxString(sqlite3_column_text(stmt, 7), wxConvUTF8);
-    wxString value = wxString(sqlite3_column_text(stmt, 8), wxConvUTF8);
+    wxString size = db_get_field(data, "SIZE");
+    wxString weight = db_get_field(data, "WEIGHT");
+    wxString acquisition = db_get_field(data, "ACQUISITION");
+    wxString collection = db_get_field(data, "COLLECTION");
+    wxString value = db_get_field(data, "VALUE");
     r->BeginBold(); r->WriteText("Size           : "); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
     r->BeginBold(); r->WriteText("Weight         : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
     r->BeginBold(); r->WriteText("Acquisition    : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
@@ -414,60 +405,56 @@ void MainFrame::draw_mineral_view(int minid) {
     r->Newline();
 
     /* Table of species */
-    ndx = 9;
-    write_table_row(stmt, "Species        ", ndx); ndx+=1;
-    write_table_row(stmt, "Class          ", ndx); ndx+=1;
-    write_table_row_chemf(stmt, "Chem. Formula  ", ndx); ndx+=1;
-    write_table_row(stmt, "Color          ", ndx); ndx+=1;
-    write_table_row(stmt, "Fluorescence SW", ndx); ndx+=1;
-    write_table_row(stmt, "Fluorescence MW", ndx); ndx+=1;
-    write_table_row(stmt, "Fluorescence LW", ndx); ndx+=1;
-    write_table_row(stmt, "Fluor. 405nm   ", ndx); ndx+=1;
-    write_table_row(stmt, "Phosphor. SW   ", ndx); ndx+=1;
-    write_table_row(stmt, "Phosphor. MW   ", ndx); ndx+=1;
-    write_table_row(stmt, "Phosphor. LW   ", ndx); ndx+=1;
-    write_table_row(stmt, "Phosphor. 405nm", ndx); ndx+=1;
-    write_table_row(stmt, "Tenebrescence  ", ndx); ndx+=1;
-    ndx += 13*3;
-    write_link_row(stmt);
+    write_table_row("Species        ", data, "SPECIES");
+    write_table_row("Class          ", data, "CLASS");
+    write_table_row_chemf("Chem. Formula  ", data);
+    write_table_row("Color          ", data, "COLOR");
+    write_table_row("Fluorescence SW", data, "FLSW");
+    write_table_row("Fluorescence MW", data, "FLMW");
+    write_table_row("Fluorescence LW", data, "FLLW");
+    write_table_row("Fluor. 405nm   ", data, "FL405");
+    write_table_row("Phosphor. SW   ", data, "PHSW");
+    write_table_row("Phosphor. MW   ", data, "PHMW");
+    write_table_row("Phosphor. LW   ", data, "PHLW");
+    write_table_row("Phosphor. 405nm", data, "PH405");
+    write_table_row("Tenebrescence  ", data, "TENEBR");
+    write_link_row(data);
     r->Newline();
 
     /* Radioactivity */
-    wxString radioact = wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8); ndx+=1;
+    wxString radioact = db_get_field(data, "RADIOACT");
     if (!radioact.empty()) {r->BeginBold(); r->WriteText("Radioactivity  : "); r->EndBold(); r->WriteText(radioact); r->Newline();}
 
     /* Comments */
-    wxString comments = wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8); ndx+=1;
+    wxString comments = db_get_field(data, "COMMENTS");
     if (!comments.empty()) {r->BeginBold(); r->WriteText("Comments       : "); r->EndBold(); r->WriteText(comments); r->Newline();}
 
     /* Data */
-    ReadData(uid.ToStdString());
+    ReadData(db_get_field(data, "MINID"));
 
     r->EndFont();
-
-    sqlite3_finalize(stmt);
 
     return;
 }
 
-static inline int guess_column_width(sqlite3_stmt *stmt, int column) {
-    int n, ln;
-    int rowbegin = 9;
-    int nrows = 13;
+static inline int guess_column_width(std::vector<std::string> data, int column) {
+    std::vector<std::string> fields = { "SPECIES", "CLASS", "COLOR", "CHEMF", "FLSW", \
+        "FLMW", "FLLW", "FL405", "PHSW", "PHMW", "PHLW", "PH405", "TENEBR" };
+    int ln;
     int length = 16;
-    for (n=rowbegin+column*nrows; n<rowbegin+column*nrows+nrows; n++) {
-        ln = wxString(sqlite3_column_text(stmt, n), wxConvUTF8).length();
+    for (auto field : fields) {
+        ln = db_get_field(data, std::string("S")+std::to_string(column)+"_"+field).length();
         length = std::max(length, ln);
     }
     return length+1;
 }
 
-void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
+void MainFrame::write_table_row(wxString name, std::vector<std::string> data, std::string field) {
     wxRichTextCtrl *r = mineral_view;
-    wxString s1 = wxString(sqlite3_column_text(stmt, ndx+0*13), wxConvUTF8);
-    wxString s2 = wxString(sqlite3_column_text(stmt, ndx+1*13), wxConvUTF8);
-    wxString s3 = wxString(sqlite3_column_text(stmt, ndx+2*13), wxConvUTF8);
-    wxString s4 = wxString(sqlite3_column_text(stmt, ndx+3*13), wxConvUTF8);
+    wxString s1 = db_get_field(data, std::string("S1_")+field);
+    wxString s2 = db_get_field(data, std::string("S2_")+field);
+    wxString s3 = db_get_field(data, std::string("S3_")+field);
+    wxString s4 = db_get_field(data, std::string("S4_")+field);
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
@@ -478,10 +465,10 @@ void MainFrame::write_table_row(sqlite3_stmt *stmt, wxString name, int ndx) {
     int l4 = s4.length();
     if (l1+l2+l3+l4>0) {
         r->BeginBold(); r->WriteText(name+": "); r->EndBold();
-        r->WriteText(s1+std::string(guess_column_width(stmt, 0)-s1.length(), ' '));
-        if (l2+l3+l4>0) r->WriteText(s2+std::string(guess_column_width(stmt, 1)-s2.length(), ' '));
-        if (l3+l4>0) r->WriteText(s3+std::string(guess_column_width(stmt, 2)-s3.length(), ' '));
-        if (l4>0) r->WriteText(s4+std::string(guess_column_width(stmt, 3)-s4.length(), ' '));
+        r->WriteText(s1+std::string(guess_column_width(data, 1)-s1.length(), ' '));
+        if (l2+l3+l4>0) r->WriteText(s2+std::string(guess_column_width(data, 2)-s2.length(), ' '));
+        if (l3+l4>0) r->WriteText(s3+std::string(guess_column_width(data, 3)-s3.length(), ' '));
+        if (l4>0) r->WriteText(s4+std::string(guess_column_width(data, 4)-s4.length(), ' '));
         r->Newline();
     }
 }
@@ -543,12 +530,12 @@ static int write_chemf(wxRichTextCtrl *r, wxString chemfwx, int *subsup) {
 }
 
 
-void MainFrame::write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx) {
+void MainFrame::write_table_row_chemf(wxString name, std::vector<std::string> data) {
     wxRichTextCtrl *r = mineral_view;
-    wxString s1 = wxString(sqlite3_column_text(stmt, ndx+0*13), wxConvUTF8);
-    wxString s2 = wxString(sqlite3_column_text(stmt, ndx+1*13), wxConvUTF8);
-    wxString s3 = wxString(sqlite3_column_text(stmt, ndx+2*13), wxConvUTF8);
-    wxString s4 = wxString(sqlite3_column_text(stmt, ndx+3*13), wxConvUTF8);
+    wxString s1 = db_get_field(data, "S1_CHEMF");
+    wxString s2 = db_get_field(data, "S2_CHEMF");
+    wxString s3 = db_get_field(data, "S3_CHEMF");
+    wxString s4 = db_get_field(data, "S4_CHEMF");
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
@@ -561,21 +548,21 @@ void MainFrame::write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx
     if (l1+l2+l3+l4>0) {
         r->BeginBold(); r->WriteText(name+": "); r->EndBold();
         l1 = write_chemf(r, s1, &subsup);
-        r->WriteText(std::string(guess_column_width(stmt, 0)-l1+(int)(subsup/3), ' '));
+        r->WriteText(std::string(guess_column_width(data, 1)-l1+(int)(subsup/3), ' '));
         subsup-=3*(int)(subsup/3);
         if (l2+l3+l4>0) {
             l2 = write_chemf(r, s2, &subsup);
-            r->WriteText(std::string(guess_column_width(stmt, 1)-l2+(int)(subsup/3), ' '));
+            r->WriteText(std::string(guess_column_width(data, 2)-l2+(int)(subsup/3), ' '));
             subsup-=3*(int)(subsup/3);
         }
         if (l3+l4>0) {
             l3 = write_chemf(r, s3, &subsup);
-            r->WriteText(std::string(guess_column_width(stmt, 2)-l3+(int)(subsup/3), ' '));
+            r->WriteText(std::string(guess_column_width(data, 3)-l3+(int)(subsup/3), ' '));
             subsup-=3*(int)(subsup/3);
         }
         if (l4>0) {
             l4 = write_chemf(r, s4, &subsup);
-            r->WriteText(std::string(guess_column_width(stmt, 3)-l4+(int)(subsup/3), ' '));
+            r->WriteText(std::string(guess_column_width(data, 4)-l4+(int)(subsup/3), ' '));
             subsup-=3*(int)(subsup/3);
         }
         r->Newline();
@@ -583,16 +570,15 @@ void MainFrame::write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx
 }
 
 
-void MainFrame::write_link_row(sqlite3_stmt *stmt) {
-    int ndx = 9;
+void MainFrame::write_link_row(std::vector<std::string> data) {
     wxRichTextAttr urlStyle;
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
     wxRichTextCtrl *r = mineral_view;
-    wxString s1 = wxString(sqlite3_column_text(stmt, ndx+0*13), wxConvUTF8);
-    wxString s2 = wxString(sqlite3_column_text(stmt, ndx+1*13), wxConvUTF8);
-    wxString s3 = wxString(sqlite3_column_text(stmt, ndx+2*13), wxConvUTF8);
-    wxString s4 = wxString(sqlite3_column_text(stmt, ndx+3*13), wxConvUTF8);
+    wxString s1 = db_get_field(data, "S1_SPECIES");
+    wxString s2 = db_get_field(data, "S2_SPECIES");
+    wxString s3 = db_get_field(data, "S3_SPECIES");
+    wxString s4 = db_get_field(data, "S4_SPECIES");
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
@@ -610,24 +596,24 @@ void MainFrame::write_link_row(sqlite3_stmt *stmt) {
         r->BeginStyle(urlStyle); r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s1p);r->WriteText("M");r->EndURL();r->EndStyle();
         r->WriteText(" ");
         r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s1p);r->WriteText("R");r->EndURL();r->EndStyle();
-        r->WriteText(std::string(guess_column_width(stmt, 0)-3, ' '));
+        r->WriteText(std::string(guess_column_width(data, 1)-3, ' '));
         if (l2+l3+l4>0) {
             r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s2p);r->WriteText("M");r->EndURL();r->EndStyle();
             r->WriteText(" ");
             r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s2p);r->WriteText("R");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 1)-3, ' '));
+            r->WriteText(std::string(guess_column_width(data, 2)-3, ' '));
         }
         if (l3+l4>0) {
             r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s3p);r->WriteText("M");r->EndURL();r->EndStyle();
             r->WriteText(" ");
             r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s3p);r->WriteText("R");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 2)-3, ' '));
+            r->WriteText(std::string(guess_column_width(data, 3)-3, ' '));
         }
         if (l4>0) {
             r->BeginStyle(urlStyle);r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s4p);r->WriteText("M");r->EndURL();r->EndStyle();
             r->WriteText(" ");
             r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s4p);r->WriteText("R");r->EndURL();r->EndStyle();
-            r->WriteText(std::string(guess_column_width(stmt, 3)-3, ' '));
+            r->WriteText(std::string(guess_column_width(data, 4)-3, ' '));
         }
         r->Newline();
     }

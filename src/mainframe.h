@@ -51,9 +51,9 @@ class MainFrame: public wxFrame {
         sqlite3 *db;
         void db_initialize();
         void open_dbfile(std::string);
-        void write_table_row(sqlite3_stmt *stmt, wxString name, int ndx);
-        void write_table_row_chemf(sqlite3_stmt *stmt, wxString name, int ndx);
-        void write_link_row(sqlite3_stmt *stmt);
+        void write_table_row(wxString name, std::vector<std::string> data, std::string field);
+        void write_table_row_chemf(wxString name, std::vector<std::string> data);
+        void write_link_row(std::vector<std::string> data);
         void ReadData(std::string uid);
         int get_minid_from_listbox(bool warn=true);
         std::string db_file_path;

@@ -303,82 +303,78 @@ AddModFrame::AddModFrame(MainFrame *parent, const wxString& title, sqlite3 *main
 
 void AddModFrame::OnSave(wxCommandEvent& event) {
 
-    std::vector<std::string> data;
+    std::vector<std::string> data(data_header.size());
     std::string temp;
+    int ndx;
 
-    data.push_back(entry_minid->GetValue().ToStdString());
+    ndx = db_get_field_index("MINID");      if (ndx>=0) data[ndx] = entry_minid->GetValue();
+    ndx = db_get_field_index("NAME");       if (ndx>=0) data[ndx] = entry_name->GetValue();
+    ndx = db_get_field_index("LOCALITY");   if (ndx>=0) data[ndx] = entry_locality->GetValue();
+    ndx = db_get_field_index("LOCID_MNDAT");if (ndx>=0) data[ndx] = entry_locid->GetValue();
+    ndx = db_get_field_index("SIZE");       if (ndx>=0) data[ndx] = entry_size->GetValue();
+    ndx = db_get_field_index("WEIGHT");     if (ndx>=0) data[ndx] = entry_weight->GetValue();
+    ndx = db_get_field_index("ACQUISITION");if (ndx>=0) data[ndx] = entry_acquisition->GetValue();
+    ndx = db_get_field_index("COLLECTION"); if (ndx>=0) data[ndx] = entry_collection->GetValue();
+    ndx = db_get_field_index("VALUE");      if (ndx>=0) data[ndx] = entry_value->GetValue();
 
-    data.push_back(entry_name->GetValue().ToStdString());
-    data.push_back(entry_locality->GetValue().ToStdString());
-    data.push_back(entry_locid->GetValue().ToStdString());
-    data.push_back(entry_size->GetValue().ToStdString());
-    data.push_back(entry_weight->GetValue().ToStdString());
-    data.push_back(entry_acquisition->GetValue().ToStdString());
-    data.push_back(entry_collection->GetValue().ToStdString());
-    data.push_back(entry_value->GetValue().ToStdString());
+    ndx = db_get_field_index("S1_SPECIES"); if (ndx>=0) data[ndx] = entry_s1_species->GetValue();
+    ndx = db_get_field_index("S1_CLASS");   if (ndx>=0) data[ndx] = entry_s1_class->GetValue();
+    ndx = db_get_field_index("S1_CHEMF");   if (ndx>=0) {    temp = entry_s1_chemf->GetValue().ToStdString(); data[ndx] = strip_unicode(temp);}
+    ndx = db_get_field_index("S1_COLOR");   if (ndx>=0) data[ndx] = entry_s1_color->GetValue();
+    ndx = db_get_field_index("S1_FLSW");    if (ndx>=0) data[ndx] = entry_s1_flsw->GetValue();
+    ndx = db_get_field_index("S1_FLMW");    if (ndx>=0) data[ndx] = entry_s1_flmw->GetValue();
+    ndx = db_get_field_index("S1_FLLW");    if (ndx>=0) data[ndx] = entry_s1_fllw->GetValue();
+    ndx = db_get_field_index("S1_FL405");   if (ndx>=0) data[ndx] = entry_s1_fl405->GetValue();
+    ndx = db_get_field_index("S1_PHSW");    if (ndx>=0) data[ndx] = entry_s1_phsw->GetValue();
+    ndx = db_get_field_index("S1_PHMW");    if (ndx>=0) data[ndx] = entry_s1_phmw->GetValue();
+    ndx = db_get_field_index("S1_PHLW");    if (ndx>=0) data[ndx] = entry_s1_phlw->GetValue();
+    ndx = db_get_field_index("S1_PH405");   if (ndx>=0) data[ndx] = entry_s1_ph405->GetValue();
+    ndx = db_get_field_index("S1_TENEBR");  if (ndx>=0) data[ndx] = entry_s1_tenebr->GetValue();
 
-    data.push_back(entry_s1_species->GetValue().ToStdString());
-    data.push_back(entry_s1_class->GetValue().ToStdString());
-    temp = entry_s1_chemf->GetValue().ToStdString();
-    data.push_back(strip_unicode(temp));
-    data.push_back(entry_s1_color->GetValue().ToStdString());
-    data.push_back(entry_s1_flsw->GetValue().ToStdString());
-    data.push_back(entry_s1_flmw->GetValue().ToStdString());
-    data.push_back(entry_s1_fllw->GetValue().ToStdString());
-    data.push_back(entry_s1_fl405->GetValue().ToStdString());
-    data.push_back(entry_s1_phsw->GetValue().ToStdString());
-    data.push_back(entry_s1_phmw->GetValue().ToStdString());
-    data.push_back(entry_s1_phlw->GetValue().ToStdString());
-    data.push_back(entry_s1_ph405->GetValue().ToStdString());
-    data.push_back(entry_s1_tenebr->GetValue().ToStdString());
+    ndx = db_get_field_index("S2_SPECIES"); if (ndx>=0) data[ndx] = entry_s2_species->GetValue();
+    ndx = db_get_field_index("S2_CLASS");   if (ndx>=0) data[ndx] = entry_s2_class->GetValue();
+    ndx = db_get_field_index("S2_CHEMF");   if (ndx>=0) {    temp = entry_s2_chemf->GetValue().ToStdString(); data[ndx] = strip_unicode(temp);}
+    ndx = db_get_field_index("S2_COLOR");   if (ndx>=0) data[ndx] = entry_s2_color->GetValue();
+    ndx = db_get_field_index("S2_FLSW");    if (ndx>=0) data[ndx] = entry_s2_flsw->GetValue();
+    ndx = db_get_field_index("S2_FLMW");    if (ndx>=0) data[ndx] = entry_s2_flmw->GetValue();
+    ndx = db_get_field_index("S2_FLLW");    if (ndx>=0) data[ndx] = entry_s2_fllw->GetValue();
+    ndx = db_get_field_index("S2_FL405");   if (ndx>=0) data[ndx] = entry_s2_fl405->GetValue();
+    ndx = db_get_field_index("S2_PHSW");    if (ndx>=0) data[ndx] = entry_s2_phsw->GetValue();
+    ndx = db_get_field_index("S2_PHMW");    if (ndx>=0) data[ndx] = entry_s2_phmw->GetValue();
+    ndx = db_get_field_index("S2_PHLW");    if (ndx>=0) data[ndx] = entry_s2_phlw->GetValue();
+    ndx = db_get_field_index("S2_PH405");   if (ndx>=0) data[ndx] = entry_s2_ph405->GetValue();
+    ndx = db_get_field_index("S2_TENEBR");  if (ndx>=0) data[ndx] = entry_s2_tenebr->GetValue();
 
-    data.push_back(entry_s2_species->GetValue().ToStdString());
-    data.push_back(entry_s2_class->GetValue().ToStdString());
-    temp = entry_s2_chemf->GetValue().ToStdString();
-    data.push_back(strip_unicode(temp));
-    data.push_back(entry_s2_color->GetValue().ToStdString());
-    data.push_back(entry_s2_flsw->GetValue().ToStdString());
-    data.push_back(entry_s2_flmw->GetValue().ToStdString());
-    data.push_back(entry_s2_fllw->GetValue().ToStdString());
-    data.push_back(entry_s2_fl405->GetValue().ToStdString());
-    data.push_back(entry_s2_phsw->GetValue().ToStdString());
-    data.push_back(entry_s2_phmw->GetValue().ToStdString());
-    data.push_back(entry_s2_phlw->GetValue().ToStdString());
-    data.push_back(entry_s2_ph405->GetValue().ToStdString());
-    data.push_back(entry_s2_tenebr->GetValue().ToStdString());
+    ndx = db_get_field_index("S3_SPECIES"); if (ndx>=0) data[ndx] = entry_s3_species->GetValue();
+    ndx = db_get_field_index("S3_CLASS");   if (ndx>=0) data[ndx] = entry_s3_class->GetValue();
+    ndx = db_get_field_index("S3_CHEMF");   if (ndx>=0) {    temp = entry_s3_chemf->GetValue().ToStdString(); data[ndx] = strip_unicode(temp);}
+    ndx = db_get_field_index("S3_COLOR");   if (ndx>=0) data[ndx] = entry_s3_color->GetValue();
+    ndx = db_get_field_index("S3_FLSW");    if (ndx>=0) data[ndx] = entry_s3_flsw->GetValue();
+    ndx = db_get_field_index("S3_FLMW");    if (ndx>=0) data[ndx] = entry_s3_flmw->GetValue();
+    ndx = db_get_field_index("S3_FLLW");    if (ndx>=0) data[ndx] = entry_s3_fllw->GetValue();
+    ndx = db_get_field_index("S3_FL405");   if (ndx>=0) data[ndx] = entry_s3_fl405->GetValue();
+    ndx = db_get_field_index("S3_PHSW");    if (ndx>=0) data[ndx] = entry_s3_phsw->GetValue();
+    ndx = db_get_field_index("S3_PHMW");    if (ndx>=0) data[ndx] = entry_s3_phmw->GetValue();
+    ndx = db_get_field_index("S3_PHLW");    if (ndx>=0) data[ndx] = entry_s3_phlw->GetValue();
+    ndx = db_get_field_index("S3_PH405");   if (ndx>=0) data[ndx] = entry_s3_ph405->GetValue();
+    ndx = db_get_field_index("S3_TENEBR");  if (ndx>=0) data[ndx] = entry_s3_tenebr->GetValue();
 
-    data.push_back(entry_s3_species->GetValue().ToStdString());
-    data.push_back(entry_s3_class->GetValue().ToStdString());
-    temp = entry_s3_chemf->GetValue().ToStdString();
-    data.push_back(strip_unicode(temp));
-    data.push_back(entry_s3_color->GetValue().ToStdString());
-    data.push_back(entry_s3_flsw->GetValue().ToStdString());
-    data.push_back(entry_s3_flmw->GetValue().ToStdString());
-    data.push_back(entry_s3_fllw->GetValue().ToStdString());
-    data.push_back(entry_s3_fl405->GetValue().ToStdString());
-    data.push_back(entry_s3_phsw->GetValue().ToStdString());
-    data.push_back(entry_s3_phmw->GetValue().ToStdString());
-    data.push_back(entry_s3_phlw->GetValue().ToStdString());
-    data.push_back(entry_s3_ph405->GetValue().ToStdString());
-    data.push_back(entry_s3_tenebr->GetValue().ToStdString());
+    ndx = db_get_field_index("S4_SPECIES"); if (ndx>=0) data[ndx] = entry_s4_species->GetValue();
+    ndx = db_get_field_index("S4_CLASS");   if (ndx>=0) data[ndx] = entry_s4_class->GetValue();
+    ndx = db_get_field_index("S4_CHEMF");   if (ndx>=0) {    temp = entry_s4_chemf->GetValue().ToStdString(); data[ndx] = strip_unicode(temp);}
+    ndx = db_get_field_index("S4_COLOR");   if (ndx>=0) data[ndx] = entry_s4_color->GetValue();
+    ndx = db_get_field_index("S4_FLSW");    if (ndx>=0) data[ndx] = entry_s4_flsw->GetValue();
+    ndx = db_get_field_index("S4_FLMW");    if (ndx>=0) data[ndx] = entry_s4_flmw->GetValue();
+    ndx = db_get_field_index("S4_FLLW");    if (ndx>=0) data[ndx] = entry_s4_fllw->GetValue();
+    ndx = db_get_field_index("S4_FL405");   if (ndx>=0) data[ndx] = entry_s4_fl405->GetValue();
+    ndx = db_get_field_index("S4_PHSW");    if (ndx>=0) data[ndx] = entry_s4_phsw->GetValue();
+    ndx = db_get_field_index("S4_PHMW");    if (ndx>=0) data[ndx] = entry_s4_phmw->GetValue();
+    ndx = db_get_field_index("S4_PHLW");    if (ndx>=0) data[ndx] = entry_s4_phlw->GetValue();
+    ndx = db_get_field_index("S4_PH405");   if (ndx>=0) data[ndx] = entry_s4_ph405->GetValue();
+    ndx = db_get_field_index("S4_TENEBR");  if (ndx>=0) data[ndx] = entry_s4_tenebr->GetValue();
 
-    data.push_back(entry_s4_species->GetValue().ToStdString());
-    data.push_back(entry_s4_class->GetValue().ToStdString());
-    temp = entry_s4_chemf->GetValue().ToStdString();
-    data.push_back(strip_unicode(temp));
-    data.push_back(entry_s4_color->GetValue().ToStdString());
-    data.push_back(entry_s4_flsw->GetValue().ToStdString());
-    data.push_back(entry_s4_flmw->GetValue().ToStdString());
-    data.push_back(entry_s4_fllw->GetValue().ToStdString());
-    data.push_back(entry_s4_fl405->GetValue().ToStdString());
-    data.push_back(entry_s4_phsw->GetValue().ToStdString());
-    data.push_back(entry_s4_phmw->GetValue().ToStdString());
-    data.push_back(entry_s4_phlw->GetValue().ToStdString());
-    data.push_back(entry_s4_ph405->GetValue().ToStdString());
-    data.push_back(entry_s4_tenebr->GetValue().ToStdString());
-
-    data.push_back(entry_radioact->GetValue().ToStdString());
-    data.push_back(entry_comments->GetValue().ToStdString());
+    ndx = db_get_field_index("RADIOACT");   if (ndx>=0) data[ndx] = entry_radioact->GetValue();
+    ndx = db_get_field_index("COMMENTS");   if (ndx>=0) data[ndx] = entry_comments->GetValue();
 
     std::string errmsg = "";
     int success_id = db_addmod_mineral(db, data, modifying, &errmsg);
@@ -397,91 +393,81 @@ void AddModFrame::OnCancel(wxCommandEvent& event) {
 }
 
 void AddModFrame::PopulateForm(int uid) {
-    int ret;
-    const char *query = "SELECT * FROM MINERALS WHERE MINID=?";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
-    sqlite3_bind_int(stmt, 1, uid);
-    ret=sqlite3_step(stmt);
-    if (ret!=SQLITE_ROW) {
-        wxLogMessage("Impossible to find ID in database :(");
+
+    std::string errmsg = "";
+    std::vector<std::string> data = db_get_data(db, uid, &errmsg);
+    if (errmsg.size()>0) {
         return;
     }
 
-    sqlite3_column_text(stmt, 1);
+    entry_minid->AppendText      (db_get_field(data, "MINID", false));
+    entry_name->AppendText       (db_get_field(data, "NAME", false));
+    entry_locality->AppendText   (db_get_field(data, "LOCALITY", false));
+    entry_locid->AppendText      (db_get_field(data, "LOCID_MNDAT", false));
+    entry_size->AppendText       (db_get_field(data, "SIZE", false));
+    entry_weight->AppendText     (db_get_field(data, "WEIGHT", false));
+    entry_acquisition->AppendText(db_get_field(data, "ACQUISITION", false));
+    entry_collection->AppendText (db_get_field(data, "COLLECTION", false));
+    entry_value->AppendText      (db_get_field(data, "VALUE", false));
 
-    int ndx = 0;
-    entry_minid->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_name->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_locality->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_locid->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_size->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_weight->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_acquisition->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_collection->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_value->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
+    entry_s1_species->AppendText(db_get_field(data, "S1_SPECIES", false));
+    entry_s1_class->AppendText  (db_get_field(data, "S1_CLASS", false));
+    entry_s1_chemf->AppendText  (db_get_field(data, "S1_CHEMF", false));
+    entry_s1_color->AppendText  (db_get_field(data, "S1_COLOR", false));
+    entry_s1_flsw->AppendText   (db_get_field(data, "S1_FLSW", false));
+    entry_s1_flmw->AppendText   (db_get_field(data, "S1_FLMW", false));
+    entry_s1_fllw->AppendText   (db_get_field(data, "S1_FLLW", false));
+    entry_s1_fl405->AppendText  (db_get_field(data, "S1_FL405", false));
+    entry_s1_phsw->AppendText   (db_get_field(data, "S1_PHSW", false));
+    entry_s1_phmw->AppendText   (db_get_field(data, "S1_PHMW", false));
+    entry_s1_phlw->AppendText   (db_get_field(data, "S1_PHLW", false));
+    entry_s1_ph405->AppendText  (db_get_field(data, "S1_PH405", false));
+    entry_s1_tenebr->AppendText (db_get_field(data, "S1_TENEBR", false));
 
-    entry_s1_species->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_class->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_chemf->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_color->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_flsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_flmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_fllw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_fl405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_phsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_phmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_phlw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_ph405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s1_tenebr->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
+    entry_s2_species->AppendText(db_get_field(data, "S2_SPECIES", false));
+    entry_s2_class->AppendText  (db_get_field(data, "S2_CLASS", false));
+    entry_s2_chemf->AppendText  (db_get_field(data, "S2_CHEMF", false));
+    entry_s2_color->AppendText  (db_get_field(data, "S2_COLOR", false));
+    entry_s2_flsw->AppendText   (db_get_field(data, "S2_FLSW", false));
+    entry_s2_flmw->AppendText   (db_get_field(data, "S2_FLMW", false));
+    entry_s2_fllw->AppendText   (db_get_field(data, "S2_FLLW", false));
+    entry_s2_fl405->AppendText  (db_get_field(data, "S2_FL405", false));
+    entry_s2_phsw->AppendText   (db_get_field(data, "S2_PHSW", false));
+    entry_s2_phmw->AppendText   (db_get_field(data, "S2_PHMW", false));
+    entry_s2_phlw->AppendText   (db_get_field(data, "S2_PHLW", false));
+    entry_s2_ph405->AppendText  (db_get_field(data, "S2_PH405", false));
+    entry_s2_tenebr->AppendText (db_get_field(data, "S2_TENEBR", false));
 
-    entry_s2_species->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_class->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_chemf->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_color->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_flsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_flmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_fllw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_fl405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_phsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_phmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_phlw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_ph405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s2_tenebr->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
+    entry_s3_species->AppendText(db_get_field(data, "S3_SPECIES", false));
+    entry_s3_class->AppendText  (db_get_field(data, "S3_CLASS", false));
+    entry_s3_chemf->AppendText  (db_get_field(data, "S3_CHEMF", false));
+    entry_s3_color->AppendText  (db_get_field(data, "S3_COLOR", false));
+    entry_s3_flsw->AppendText   (db_get_field(data, "S3_FLSW", false));
+    entry_s3_flmw->AppendText   (db_get_field(data, "S3_FLMW", false));
+    entry_s3_fllw->AppendText   (db_get_field(data, "S3_FLLW", false));
+    entry_s3_fl405->AppendText  (db_get_field(data, "S3_FL405", false));
+    entry_s3_phsw->AppendText   (db_get_field(data, "S3_PHSW", false));
+    entry_s3_phmw->AppendText   (db_get_field(data, "S3_PHMW", false));
+    entry_s3_phlw->AppendText   (db_get_field(data, "S3_PHLW", false));
+    entry_s3_ph405->AppendText  (db_get_field(data, "S3_PH405", false));
+    entry_s3_tenebr->AppendText (db_get_field(data, "S3_TENEBR", false));
 
-    entry_s3_species->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_class->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_chemf->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_color->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_flsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_flmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_fllw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_fl405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_phsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_phmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_phlw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_ph405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s3_tenebr->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-   
-    entry_s4_species->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_class->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_chemf->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_color->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_flsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_flmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_fllw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_fl405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_phsw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_phmw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_phlw->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_ph405->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-    entry_s4_tenebr->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
+    entry_s4_species->AppendText(db_get_field(data, "S4_SPECIES", false));
+    entry_s4_class->AppendText  (db_get_field(data, "S4_CLASS", false));
+    entry_s4_chemf->AppendText  (db_get_field(data, "S4_CHEMF", false));
+    entry_s4_color->AppendText  (db_get_field(data, "S4_COLOR", false));
+    entry_s4_flsw->AppendText   (db_get_field(data, "S4_FLSW", false));
+    entry_s4_flmw->AppendText   (db_get_field(data, "S4_FLMW", false));
+    entry_s4_fllw->AppendText   (db_get_field(data, "S4_FLLW", false));
+    entry_s4_fl405->AppendText  (db_get_field(data, "S4_FL405", false));
+    entry_s4_phsw->AppendText   (db_get_field(data, "S4_PHSW", false));
+    entry_s4_phmw->AppendText   (db_get_field(data, "S4_PHMW", false));
+    entry_s4_phlw->AppendText   (db_get_field(data, "S4_PHLW", false));
+    entry_s4_ph405->AppendText  (db_get_field(data, "S4_PH405", false));
+    entry_s4_tenebr->AppendText (db_get_field(data, "S4_TENEBR", false));
 
-    entry_radioact->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-
-    entry_comments->AppendText(wxString(sqlite3_column_text(stmt, ndx), wxConvUTF8)); ndx+=1;
-
-    sqlite3_finalize(stmt);
+    entry_radioact->AppendText(db_get_field(data, "RADIOACT", false));
+    entry_comments->AppendText(db_get_field(data, "COMMENTS", false));
 
     return;
 }

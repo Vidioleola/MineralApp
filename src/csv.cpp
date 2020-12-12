@@ -5,15 +5,6 @@
 #include "addtodb.hpp"
 #include "utils.h"
 
-static std::vector<std::string> data_header = {
-    "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
-    "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
-    "S2_SPECIES", "S2_CLASS", "S2_CHEMF", "S2_COLOR", "S2_FLSW", "S2_FLMW", "S2_FLLW", "S2_FL405", "S2_PHSW", "S2_PHMW", "S2_PHLW", "S2_PH405", "S2_TENEBR",
-    "S3_SPECIES", "S3_CLASS", "S3_CHEMF", "S3_COLOR", "S3_FLSW", "S3_FLMW", "S3_FLLW", "S3_FL405", "S3_PHSW", "S3_PHMW", "S3_PHLW", "S3_PH405", "S3_TENEBR",
-    "S4_SPECIES", "S4_CLASS", "S4_CHEMF", "S4_COLOR", "S4_FLSW", "S4_FLMW", "S4_FLLW", "S4_FL405", "S4_PHSW", "S4_PHMW", "S4_PHLW", "S4_PH405", "S4_TENEBR",
-    "RADIOACT", "COMMENTS"
-};
-
 static bool import_csv_check(std::string filename, std::string *errmsg) {
     std::ifstream f(filename);
     aria::csv::CsvParser parser(f);
@@ -84,40 +75,26 @@ bool export_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
 
     std::ofstream csvfile;
     csvfile.open(filename);
-    int ret, i;
-
-    /* Open connection to DB */
-    sqlite3_stmt *stmt;
-    ret = sqlite3_prepare_v2(db, "SELECT * FROM MINERALS", -1, &stmt, NULL);
-    if (ret!=SQLITE_OK) {
-        *errmsg += std::string("sql error prepare: ") + std::string(sqlite3_errmsg(db));
-        return false;
-    }
+    size_t data_header_size = data_header.size();
 
     /* Write CSV header */
-    for (i=0; i<63-1; i++) {
+    for (auto i=0; i<data_header_size-1; i++) {
         csvfile << data_header[i] << ",";
     }
-    csvfile << data_header[62] << std::endl;
+    csvfile << data_header[data_header_size-1] << std::endl;
 
-    /* Write all data */
-    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
-        for (i=0; i<63; i++) {
-            const unsigned char *uc = sqlite3_column_text(stmt, i);
-            std::string s = "";
-            if (uc!=NULL) s = (const char*)uc;
+    /* Loop over all minid and write data */
+    std::vector<int> minids = db_get_minid_list(db, 0, errmsg);
+    for (auto minid : minids) {
+        std::vector<std::string> data = db_get_data(db, minid, errmsg);
+        for (int i=0; i<data_header_size; i++) {
+            std::string s = db_get_field(data, data_header[i], false);
             csvfile << "\"" << str_escape(s, '"', '"') << "\"";
-            if (i+1!=63) csvfile << ",";
+            if (i+1!=data_header_size) csvfile << ",";
         }
         csvfile << std::endl;
     }
 
-    /* Close and return */
-    if (ret!=SQLITE_DONE) {
-        *errmsg += std::string("sql error done: ") + std::string(sqlite3_errmsg(db));
-        return false;
-    }
-    sqlite3_finalize(stmt);
     csvfile.close();
     return true;
 }

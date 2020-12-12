@@ -40,6 +40,8 @@ int db_get_field_index(std::string field);
 std::vector<int> db_get_minid_list(sqlite3 *db, int orderby, std::string *errmsg);
 std::vector<std::string> db_get_country_list(sqlite3 *db, std::string *errmsg);
 std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg);
+std::vector<std::string> db_search_minerals(sqlite3 *db, std::string sname, std::string sminid, std::string country, std::string species, 
+        std::string orderby, std::string *errmsg);
 std::vector<fs::path> db_get_datafile_list(std::string db_file_path, std::string minid);
 void db_generate_report(sqlite3* db, std::string fname, std::string db_path, bool fulldb, bool incdata, bool html, int selected_uid, std::string *errmsg);
 

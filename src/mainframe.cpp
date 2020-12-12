@@ -709,53 +709,28 @@ void MainFrame::populate_listbox() {
 
     mineral_listbox->Clear();
 
-    int orderby = mineral_orderby->GetSelection();
+    std::string orderby;
+    int orderby_int = mineral_orderby->GetSelection();
+    if (orderby_int==1) orderby="NAME"; else orderby="MINID";
     std::string searchstr = str_tolower(mineral_search->GetValue().ToStdString());
 
     int country_id = mineral_country->GetSelection();
-    wxString country;
-    if (country_id!=wxNOT_FOUND) {
-        country = mineral_country->GetString(country_id);
-    }
+    std::string country;
+    if (country_id!=wxNOT_FOUND) country = mineral_country->GetString(country_id);
     if (country=="Any") country="";
 
     int species_id = mineral_species->GetSelection();
-    wxString species;
-    if (species_id!=wxNOT_FOUND) {
-        species = mineral_species->GetString(species_id);
-    }
+    std::string species;
+    if (species_id!=wxNOT_FOUND) species = mineral_species->GetString(species_id);
     if (species=="Any") species="";
 
-    const char *query;
-    if (orderby==1) {
-        query = "SELECT MINID,NAME,LOCALITY,S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS ORDER BY NAME";
-    } else {
-        query = "SELECT MINID,NAME,LOCALITY,S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS ORDER BY MINID";
-    }
-    int ret;
-    sqlite3_stmt *stmt;
-    ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("error: %s", sqlite3_errmsg(db));
+    std::string errmsg;
+    std::vector<std::string> results = db_search_minerals(db, searchstr, searchstr, country, species, orderby, &errmsg);
+    if (errmsg!="") {
+        wxLogMessage("error: %s", errmsg);
         return;
     }
-    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
-        wxString name = wxString(sqlite3_column_text(stmt, 1), wxConvUTF8) + wxString(" [") + wxString(sqlite3_column_text(stmt, 0), wxConvUTF8) + wxString("]");
-        wxString locality = wxString(sqlite3_column_text(stmt, 2), wxConvUTF8);
-        wxString specieses = wxString(sqlite3_column_text(stmt, 3), wxConvUTF8) + 
-                             wxString(sqlite3_column_text(stmt, 4), wxConvUTF8) +
-                             wxString(sqlite3_column_text(stmt, 5), wxConvUTF8) +
-                             wxString(sqlite3_column_text(stmt, 6), wxConvUTF8);
-        if (str_tolower(name.ToStdString()).find(searchstr)!=std::string::npos && 
-                locality.find(country)!=std::string::npos &&
-                specieses.find(species)!=std::string::npos) {
-            mineral_listbox->Append(name);
-        }
-    }
-    if (ret!=SQLITE_DONE) {
-        wxLogMessage("error: ", sqlite3_errmsg(db));
-    }
-    sqlite3_finalize(stmt);
+    for (auto res : results) mineral_listbox->Append(res);
 
     return;
 }

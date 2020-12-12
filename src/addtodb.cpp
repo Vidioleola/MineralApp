@@ -87,6 +87,42 @@ std::vector<int> db_get_minid_list(sqlite3 *db, int orderby, std::string *errmsg
     return minids;
 }
 
+
+/* Search the database for minerals that match the given criteria. Return a formated list of strings */
+std::vector<std::string> db_search_minerals(sqlite3 *db, std::string sname, std::string sminid, std::string country, std::string species, 
+        std::string orderby, std::string *errmsg) {
+
+    std::string query = "SELECT MINID, NAME FROM MINERALS ";
+    query += "WHERE LOCALITY LIKE \"%" + country + "\" AND ";
+    query += "( S1_SPECIES = \""+species+"\" or S2_SPECIES = \""+species+"\" or S3_SPECIES = \""+species+"\" or S4_SPECIES = \""+species+"\") ";
+    query += "AND ( NAME LIKE \"%"+sname+"%\" OR MINID LIKE \"%"+sminid+"%\" ) ";
+    query += "ORDER BY " + orderby;
+
+    std::vector<std::string> results;
+    int ret;
+    sqlite3_stmt *stmt;
+    ret = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
+    if (ret!=SQLITE_OK) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+        return results;
+    }
+    const unsigned char *uc;
+    std::string minid, name;
+    while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
+        uc = sqlite3_column_text(stmt, 0);
+        if (uc!=NULL) minid=(const char*)uc; else minid="";
+        uc = sqlite3_column_text(stmt, 1);
+        if (uc!=NULL) name=(const char*)uc; else name="";
+        results.push_back(name + " [" + minid + "]");
+    }
+    if (ret!=SQLITE_DONE) {
+        *errmsg += std::string(sqlite3_errmsg(db));
+    }
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+
 /* Get a sorted list of files in the data directory for a given specimen */
 std::vector<fs::path> db_get_datafile_list(std::string db_file_path, std::string minid) {
     std::vector<fs::path> files;

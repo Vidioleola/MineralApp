@@ -49,8 +49,6 @@ class MainFrame: public wxFrame {
         void OnURL(wxTextUrlEvent& event);
         void populate_listbox_evt(wxCommandEvent& event);
         sqlite3 *db;
-        void db_initialize();
-        void open_dbfile(std::string);
         void write_table_row(wxString name, std::vector<std::string> data, std::string field);
         void write_table_row_chemf(wxString name, std::vector<std::string> data);
         void write_link_row(std::vector<std::string> data);

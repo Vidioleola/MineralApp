@@ -1,5 +1,5 @@
 
 
-bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg);
-bool export_csv(sqlite3 *db, std::string filename, std::string *errmsg);
+bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg);
+bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg);
 

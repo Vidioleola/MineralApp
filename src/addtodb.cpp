@@ -1,6 +1,150 @@
 
 #include "addtodb.hpp"
 
+
+/* Initialize an empty db */
+void db_initialize(sqlite3 **db, std::string *errmsg) {
+    int ret;
+    char *errmsg_c;
+    ret = sqlite3_open(":memory:", db);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Can't open database: ";
+        *errmsg += sqlite3_errmsg(*db);
+        return;
+    }
+    const char *query_minerals_create = "CREATE TABLE MINERALS (MINID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, LOCALITY TEXT, LOCID_MNDAT TEXT, SIZE TEXT, WEIGHT TEXT, ACQUISITION TEXT, COLLECTION TEXT, VALUE TEXT, S1_SPECIES TEXT, S1_CLASS TEXT, S1_CHEMF TEXT, S1_COLOR TEXT, S1_FLSW TEXT, S1_FLMW TEXT, S1_FLLW TEXT, S1_FL405 TEXT, S1_PHSW TEXT, S1_PHMW TEXT, S1_PHLW TEXT, S1_PH405 TEXT, S1_TENEBR TEXT, S2_SPECIES TEXT, S2_CLASS TEXT, S2_CHEMF TEXT, S2_COLOR TEXT, S2_FLSW TEXT, S2_FLMW TEXT, S2_FLLW TEXT, S2_FL405 TEXT, S2_PHSW TEXT, S2_PHMW TEXT, S2_PHLW TEXT, S2_PH405 TEXT, S2_TENEBR TEXT, S3_SPECIES TEXT, S3_CLASS TEXT, S3_CHEMF TEXT, S3_COLOR TEXT, S3_FLSW TEXT, S3_FLMW TEXT, S3_FLLW TEXT, S3_FL405 TEXT, S3_PHSW TEXT, S3_PHMW TEXT, S3_PHLW TEXT, S3_PH405 TEXT, S3_TENEBR TEXT, S4_SPECIES TEXT, S4_CLASS TEXT, S4_CHEMF TEXT, S4_COLOR TEXT, S4_FLSW TEXT, S4_FLMW TEXT, S4_FLLW TEXT, S4_FL405 TEXT, S4_PHSW TEXT, S4_PHMW TEXT, S4_PHLW TEXT, S4_PH405 TEXT, S4_TENEBR TEXT, RADIOACT TEXT, COMMENTS TEXT );";
+    ret = sqlite3_exec(*db, query_minerals_create, NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg);
+        sqlite3_close(*db);
+        *db=NULL;
+        return;
+    }
+    const char *query_settings_create = "CREATE TABLE SETTINGS (VERSION_MAJOR INT, VERSION_MINOR INT)";
+    ret = sqlite3_exec(*db, query_settings_create, NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg);
+        sqlite3_close(*db);
+        *db=NULL;
+        return;
+    }
+    const char *query_set_version = "INSERT INTO SETTINGS (VERSION_MAJOR, VERSION_MINOR) VALUES (" VERSION_MAJOR ", " VERSION_MINOR ");";
+    ret = sqlite3_exec(*db, query_set_version, NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg);
+        sqlite3_close(*db);
+        *db=NULL;
+        return;
+    }
+    return;
+}
+
+
+/* Open db from file */
+void db_open(sqlite3 **db, std::string fname, std::string *errmsg) {
+
+    int ret;
+
+    /* Open the db from file */
+    sqlite3 *db_tmp;
+    ret = sqlite3_open(fname.c_str(), &db_tmp);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Failed to open file for reading!";
+        return;
+    }
+    /* Create a new db in memory */
+    ret = sqlite3_open(":memory:", db);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Can't create memory database: ";
+        *errmsg += sqlite3_errmsg(*db);
+        return;
+    }
+    /* Make the copy */
+    sqlite3_backup *bkp;
+    bkp = sqlite3_backup_init(*db, "main", db_tmp, "main");
+    if (!bkp) {
+        *errmsg += "Failed to backup file!";
+        return;
+    }
+    sqlite3_backup_step(bkp, -1);
+    sqlite3_backup_finish(bkp);
+    sqlite3_close(db_tmp);
+
+    return;
+}
+
+
+/* Save db to file */
+void db_save(sqlite3 *db, std::string fname, std::string *errmsg) {
+    sqlite3 *db_tmp;
+    int ret = sqlite3_open(fname.c_str(), &db_tmp);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Failed to open file for writing!";
+        return;
+    }
+    sqlite3_backup *bkp;
+    bkp = sqlite3_backup_init(db_tmp, "main", db, "main");
+    if (!bkp) {
+        *errmsg += "Failed to initialize database saving! ";
+        *errmsg += sqlite3_errmsg(db_tmp);
+        return;
+    }
+    ret = sqlite3_backup_step(bkp, -1);
+    if (ret != SQLITE_DONE) {
+        *errmsg += "Failed to save all data to file (1)";
+    }
+    ret = sqlite3_backup_finish(bkp);
+    if (ret != SQLITE_OK) {
+        *errmsg += "Failed to save all data to file (2)";
+    }
+    sqlite3_close(db_tmp);
+}
+
+
+/* Close database */
+void db_close(sqlite3 *db, std::string *errmsg) {
+    int ret = sqlite3_close(db);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Cannot close current db. Sorry!";
+    }
+}
+
+
+/* Delete a mineral from the database */
+void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg) {
+    std::string query = "DELETE FROM MINERALS WHERE minid=" + std::to_string(minid);
+    char *errmsg_c;
+    int ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Delete failed! ";
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg_c);
+    }
+}
+
+
+/* Duplicate the specified minid */
+void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg) {
+    std::string  query = " \
+        CREATE TEMPORARY TABLE temp_table as SELECT * FROM  MINERALS WHERE minid=" + std::to_string(minid) + "; \
+        UPDATE temp_table SET MINID=NULL; \
+        INSERT INTO MINERALS SELECT * FROM temp_table; \
+        DROP TABLE temp_table; \
+    ";
+    int ret;
+    char *errmsg_c;
+    ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg);
+    }
+    return;
+}
+
+
 /* Get the index of a given field from the data_header vector */
 int db_get_field_index(std::string field) {
     auto it = find(data_header.begin(), data_header.end(), field);

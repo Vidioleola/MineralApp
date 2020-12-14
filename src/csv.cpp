@@ -5,7 +5,7 @@
 #include "addtodb.hpp"
 #include "utils.h"
 
-static bool import_csv_check(std::string filename, std::string *errmsg) {
+static bool db_csv_import_check(std::string filename, std::string *errmsg) {
     std::ifstream f(filename);
     aria::csv::CsvParser parser(f);
     int index = 0;
@@ -31,7 +31,7 @@ static bool import_csv_check(std::string filename, std::string *errmsg) {
     return false;
 }
 
-static bool import_csv_core(sqlite3 *db, std::string filename, std::string *errmsg, bool skip_miss_id) {
+static bool db_csv_import_core(sqlite3 *db, std::string filename, std::string *errmsg, bool skip_miss_id) {
     int success_id;
     int ret;
     int minid;
@@ -63,15 +63,15 @@ static bool import_csv_core(sqlite3 *db, std::string filename, std::string *errm
     return true;
 }
 
-bool import_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
-    if (!import_csv_check(filename, errmsg)) return false;
-    if (!import_csv_core(db, filename, errmsg, true)) return false;
-    if (!import_csv_core(db, filename, errmsg, false)) return false;
+bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg) {
+    if (!db_csv_import_check(filename, errmsg)) return false;
+    if (!db_csv_import_core(db, filename, errmsg, true)) return false;
+    if (!db_csv_import_core(db, filename, errmsg, false)) return false;
     return true;
 }
 
 
-bool export_csv(sqlite3 *db, std::string filename, std::string *errmsg) {
+bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg) {
 
     std::ofstream csvfile;
     csvfile.open(filename);

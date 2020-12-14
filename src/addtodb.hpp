@@ -33,6 +33,12 @@ static std::vector<std::string> data_header = {
     "RADIOACT", "COMMENTS"
 };
 
+void db_initialize(sqlite3 **db, std::string *errmsg);
+void db_open(sqlite3 **db, std::string fname, std::string *errmsg);
+void db_save(sqlite3 *db, std::string fname, std::string *errmsg);
+void db_close(sqlite3 *db, std::string *errmsg);
+void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg);
+void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg);
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg);
 std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg);
 std::string db_get_field(std::vector<std::string> data, std::string field, bool remove_no=true);

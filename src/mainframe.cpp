@@ -1,4 +1,6 @@
 
+#include "addtodb.hpp"
+
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -12,14 +14,11 @@
 #include <wx/richtext/richtextctrl.h>
 #include <wx/aboutdlg.h>
 
-#include <sqlite3.h> 
-
 #include "mainframe.h"
 #include "addmodframe.h"
 #include "genreportframe.h"
 #include "utils.h"
 #include "csv.hpp"
-#include "addtodb.hpp"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)
@@ -135,47 +134,16 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     if (openFileDialog.ShowModal()==wxID_CANCEL) {
         return;
     }
-    wxString fname = openFileDialog.GetPath();
-    /* Open it */
-    open_dbfile(fname.ToStdString());
-}
-
-void MainFrame::open_dbfile(std::string fname) {
-
-    int ret;
-
-    /* Open the db from file */
-    sqlite3 *db_tmp;
-    ret = sqlite3_open(static_cast<const char*>(fname.c_str()), &db_tmp);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("Failed to open file for reading!");
-        return;
+    std::string fname = openFileDialog.GetPath().ToStdString();
+    std::string errmsg;
+    db_open(&db, fname, &errmsg);
+    if (errmsg.size()>0) {
+        wxLogMessage(wxString(errmsg));
     }
-    /* Create a new db in memory */
-    ret = sqlite3_open(":memory:", &db);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("Can't create memory database: %s", sqlite3_errmsg(db));
-        return;
-    }
-    /* Make the copy */
-    sqlite3_backup *bkp;
-    bkp = sqlite3_backup_init(db, "main", db_tmp, "main");
-    if (!bkp) {
-        wxLogMessage("Failed to backup file!");
-        return;
-    }
-    sqlite3_backup_step(bkp, -1);
-    sqlite3_backup_finish(bkp);
-    sqlite3_close(db_tmp);
-
-    /* Store info */
     db_file_path = fs::path(fname);
     write_config();
     update_gui();
-
-    return;
 }
-
 
 void MainFrame::OnSave(wxCommandEvent& event) {
     if (!db) {
@@ -186,33 +154,22 @@ void MainFrame::OnSave(wxCommandEvent& event) {
     if (saveFileDialog.ShowModal() == wxID_CANCEL) {
         return;
     }
-    wxString fname2 = saveFileDialog.GetPath();
-    const char *fname = static_cast<const char*>(fname2.c_str());
-    sqlite3 *db_tmp;
-    int ret = sqlite3_open(fname, &db_tmp);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("Failed to open file for writing!");
-        return;
+    std::string fname = saveFileDialog.GetPath().ToStdString();
+    std::string errmsg;
+    db_save(db, fname, &errmsg);
+    if (errmsg.size()>0) {
+        wxLogMessage(wxString(errmsg));
     }
-    sqlite3_backup *bkp;
-    bkp = sqlite3_backup_init(db_tmp, "main", db, "main");
-    if (!bkp) {
-        wxLogMessage("Failed to backup file!");
-        return;
-    }
-    sqlite3_backup_step(bkp, -1);
-    sqlite3_backup_finish(bkp);
-    sqlite3_close(db_tmp);
 }
 
 void MainFrame::OnClose(wxCommandEvent& event) {
     std::string msg = "You are going to close the current database. If you did not save it any edits will be lost. This operation cannot be undone.";
     wxMessageDialog dial(this, msg, "Are you sure you want to close the current database??", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
     if (dial.ShowModal() != wxID_YES) return;
-    int ret;
-    ret = sqlite3_close(db);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("Cannot close current db. Sorry!");
+    std::string errmsg;
+    db_close(db, &errmsg);
+    if (errmsg.size()>0) {
+        wxLogMessage(wxString(errmsg));
         return;
     }
     db = NULL;
@@ -248,10 +205,11 @@ void MainFrame::OnURL(wxTextUrlEvent& event) {
 }
 
 void MainFrame::OnNewMineral(wxCommandEvent& event) {
+    std::string errmsg;
     if (!db) {
-        db_initialize();
+        db_initialize(&db, &errmsg);
     }
-    if (!db) {
+    if (!db or errmsg.size()>0) {
         wxMessageBox("DB initialization failed! Sorry, try to close everything and retry...");
         return;
     }
@@ -284,25 +242,19 @@ void MainFrame::OnModifyMineral(wxCommandEvent& event) {
     frame->Show();
 }
 
+
 void MainFrame::OnDuplicateMineral(wxCommandEvent& event) {
     int minid = get_minid_from_listbox();
     if (minid<0) return;
-    std::string  query = " \
-        CREATE TEMPORARY TABLE temp_table as SELECT * FROM  MINERALS WHERE minid=" + std::to_string(minid) + "; \
-        UPDATE temp_table SET MINID=NULL; \
-        INSERT INTO MINERALS SELECT * FROM temp_table; \
-        DROP TABLE temp_table; \
-    ";
-    int ret;
-    char *errmsg;
-    ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("SQL error: %s", errmsg);
-        sqlite3_free(errmsg);
-        return;
+    std::string errmsg;
+    db_duplicate_mineral(db, minid, &errmsg);
+    if (errmsg.size()>0) {
+        wxLogMessage(wxString("Duplicate failed: ") + errmsg);
+    } else {
+        update_gui();
+        wxLogMessage("Mineral duplicated!");
     }
-    update_gui();
-    wxLogMessage("Mineral duplicated!");
+    return;
 }
 
 void MainFrame::OnDeleteMineral(wxCommandEvent& event) {
@@ -311,13 +263,10 @@ void MainFrame::OnDeleteMineral(wxCommandEvent& event) {
     std::string msg = "You are going to delete mineral ID " + std::to_string(minid) +  ". This operation cannot be undone.";
     wxMessageDialog dial(this, msg, "Are you sure you want to delete this mineral?", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
     if (dial.ShowModal() != wxID_YES) return;
-    std::string query = "DELETE FROM MINERALS WHERE minid=" + std::to_string(minid);
-    int ret;
-    char *errmsg;
-    ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("SQL error: %s", errmsg);
-        sqlite3_free(errmsg);
+    std::string errmsg;
+    db_delete_mineral(db, minid, &errmsg);
+    if (errmsg.size()>0) {
+        wxLogMessage(wxString(errmsg));
         return;
     }
     update_gui();
@@ -663,44 +612,6 @@ void MainFrame::ReadData(std::string uid) {
     }
 }
 
-void MainFrame::db_initialize() {
-    int ret;
-    char *errmsg;
-    ret = sqlite3_open(":memory:", &db);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("Can't open database: %s", sqlite3_errmsg(db));
-        return;
-    }
-    const char *query_minerals_create = "CREATE TABLE MINERALS (MINID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, LOCALITY TEXT, LOCID_MNDAT TEXT, SIZE TEXT, WEIGHT TEXT, ACQUISITION TEXT, COLLECTION TEXT, VALUE TEXT, S1_SPECIES TEXT, S1_CLASS TEXT, S1_CHEMF TEXT, S1_COLOR TEXT, S1_FLSW TEXT, S1_FLMW TEXT, S1_FLLW TEXT, S1_FL405 TEXT, S1_PHSW TEXT, S1_PHMW TEXT, S1_PHLW TEXT, S1_PH405 TEXT, S1_TENEBR TEXT, S2_SPECIES TEXT, S2_CLASS TEXT, S2_CHEMF TEXT, S2_COLOR TEXT, S2_FLSW TEXT, S2_FLMW TEXT, S2_FLLW TEXT, S2_FL405 TEXT, S2_PHSW TEXT, S2_PHMW TEXT, S2_PHLW TEXT, S2_PH405 TEXT, S2_TENEBR TEXT, S3_SPECIES TEXT, S3_CLASS TEXT, S3_CHEMF TEXT, S3_COLOR TEXT, S3_FLSW TEXT, S3_FLMW TEXT, S3_FLLW TEXT, S3_FL405 TEXT, S3_PHSW TEXT, S3_PHMW TEXT, S3_PHLW TEXT, S3_PH405 TEXT, S3_TENEBR TEXT, S4_SPECIES TEXT, S4_CLASS TEXT, S4_CHEMF TEXT, S4_COLOR TEXT, S4_FLSW TEXT, S4_FLMW TEXT, S4_FLLW TEXT, S4_FL405 TEXT, S4_PHSW TEXT, S4_PHMW TEXT, S4_PHLW TEXT, S4_PH405 TEXT, S4_TENEBR TEXT, RADIOACT TEXT, COMMENTS TEXT );";
-    ret = sqlite3_exec(db, query_minerals_create, NULL, 0, &errmsg);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("SQL error: %s", errmsg);
-        sqlite3_free(errmsg);
-        sqlite3_close(db);
-        db=NULL;
-        return;
-    }
-    const char *query_settings_create = "CREATE TABLE SETTINGS (VERSION_MAJOR INT, VERSION_MINOR INT)";
-    ret = sqlite3_exec(db, query_settings_create, NULL, 0, &errmsg);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("SQL error: %s", errmsg);
-        sqlite3_free(errmsg);
-        sqlite3_close(db);
-        db=NULL;
-        return;
-    }
-    const char *query_set_version = "INSERT INTO SETTINGS (VERSION_MAJOR, VERSION_MINOR) VALUES (" VERSION_MAJOR ", " VERSION_MINOR ");";
-    ret = sqlite3_exec(db, query_set_version, NULL, 0, &errmsg);
-    if (ret!=SQLITE_OK) {
-        wxLogMessage("SQL error: %s", errmsg);
-        sqlite3_free(errmsg);
-        sqlite3_close(db);
-        db=NULL;
-        return;
-    }
-    return;
-}
-
 void MainFrame::populate_listbox_evt(wxCommandEvent& event) {
     populate_listbox();
 }
@@ -766,6 +677,7 @@ void MainFrame::update_gui() {
 }
 
 void MainFrame::import_csv(wxCommandEvent& event) {
+    std::string errmsg;
     /* Check if some db is already opened and warn the user */
     if (db) {
         wxMessageDialog *dial = new wxMessageDialog(NULL, "You have already an open database. By importing from a CSV file any duplicate mineral id will overwtie existing ones. Do you want to continue?", "Question", wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
@@ -773,7 +685,11 @@ void MainFrame::import_csv(wxCommandEvent& event) {
             return;
         }
     } else {
-        db_initialize();
+        db_initialize(&db, &errmsg);
+        if (errmsg.size()>0) {
+            wxLogMessage(wxString(errmsg));
+            return;
+        }
     }
 
     /* Get the filename of the db to read */
@@ -783,8 +699,7 @@ void MainFrame::import_csv(wxCommandEvent& event) {
     }
     wxString fname = openFileDialog.GetPath();
 
-    std::string errmsg;
-    bool success = ::import_csv(db, fname.ToStdString(), &errmsg);
+    bool success = db_csv_import(db, fname.ToStdString(), &errmsg);
     if (!success) {
         wxLogMessage(wxString("Import failed! ") + errmsg);
     }
@@ -801,7 +716,7 @@ void MainFrame::export_csv(wxCommandEvent& event) {
         return;
     }
     std::string errmsg = "";
-    bool success = ::export_csv(db, saveFileDialog.GetPath().ToStdString(), &errmsg);
+    bool success = db_csv_export(db, saveFileDialog.GetPath().ToStdString(), &errmsg);
     if (!success) {
         wxLogMessage(wxString(errmsg));
     }
@@ -838,7 +753,15 @@ void MainFrame::read_config() {
         }
     }
     configfile.close();
-    if (!last_open.empty()) open_dbfile(last_open);
+    if (!last_open.empty()) {
+        std::string errmsg;
+        db_open(&db, last_open, &errmsg);
+        if (errmsg.size()>0) {
+            wxLogMessage(wxString(errmsg));
+        }
+        db_file_path = fs::path(last_open);
+        update_gui();
+    }
 }
 
 

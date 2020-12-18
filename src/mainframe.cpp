@@ -196,8 +196,6 @@ void MainFrame::OnHelp(wxCommandEvent& event) {
 
 void MainFrame::OnURL(wxTextUrlEvent& event) {
     wxLaunchDefaultBrowser(event.GetString());
-    mineral_view->SetCaretPosition(0);
-    mineral_view->SetDefaultStyleToCursorStyle();
 }
 
 void MainFrame::OnNewMineral(wxCommandEvent& event) {
@@ -278,7 +276,6 @@ void MainFrame::OnSelectMineral(wxCommandEvent& event) {
 
 void MainFrame::draw_mineral_view(int minid) {
     mineral_view->Clear();
-    //mineral_view->SetDefaultStyleToCursorStyle();
     if (minid<0) {
         return;
     }
@@ -604,6 +601,7 @@ void MainFrame::ReadData(std::string uid) {
             r->WriteText(wxString("file: "));
         }
         r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(path));r->WriteText(wxString(path.filename()));r->EndURL();r->EndStyle();
+        r->WriteText(" ");
         r->Newline();
         r->Newline();
     }

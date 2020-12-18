@@ -9,7 +9,6 @@
 
 #include "mainframe.h"
 #include "addmodframe.h"
-#include "utils.h"
 
 
 wxBEGIN_EVENT_TABLE(AddModFrame, wxFrame)

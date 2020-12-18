@@ -15,7 +15,6 @@
 #include "mainframe.h"
 #include "addmodframe.h"
 #include "genreportframe.h"
-#include "utils.h"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)

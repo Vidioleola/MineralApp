@@ -57,5 +57,10 @@ void db_generate_report(sqlite3* db, std::string fname, std::string db_path, boo
 bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg);
 bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg);
 
+std::string url_encode(const std::string &value);
+std::string str_escape(const std::string &value, char to_escape, char escape_with);
+std::string str_tolower(std::string s);
+std::string strip_unicode(std::string &str);
+
 #endif
 

@@ -586,6 +586,7 @@ void MainFrame::ReadData(std::string uid) {
     r->Newline();
 
     for (const auto & path : files) {
+        r->WriteText("    ");
         std::string ext = path.extension().string();
         if (std::find(formats.begin(), formats.end(), ext) != formats.end()) {
             wxImage image = wxImage(wxString(path.string()));
@@ -595,14 +596,14 @@ void MainFrame::ReadData(std::string uid) {
                 scale = 400.0/std::max(width, height);
                 image.Rescale(int(width*scale), int(height*scale));
             }
-            r->WriteText("    ");
             r->WriteImage(image);
-        } else {
             r->WriteText("    ");
-            r->WriteText(wxString("file: ")+wxString(path.filename()));
+        } else if (fs::is_directory(path)) {
+            r->WriteText(wxString("directory: "));
+        } else {
+            r->WriteText(wxString("file: "));
         }
-        r->WriteText("    ");
-        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(path));r->WriteText(wxString("Open original"));r->EndURL();r->EndStyle();
+        r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(path));r->WriteText(wxString(path.filename()));r->EndURL();r->EndStyle();
         r->Newline();
         r->Newline();
     }

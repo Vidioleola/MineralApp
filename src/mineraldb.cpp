@@ -1,5 +1,14 @@
 
-#include "addtodb.hpp"
+#include "mineraldb.hpp"
+
+
+#include <cstring>
+#include <iostream>
+#include <fstream>
+#include "base64.h"
+#include "parsecsv.hpp"
+#include "image.h"
+#include "utils.h"
 
 
 /* Initialize an empty db */
@@ -238,7 +247,7 @@ std::vector<std::string> db_search_minerals(sqlite3 *db, std::string sname, std:
 
     std::string query = "SELECT MINID, NAME FROM MINERALS ";
     query += "WHERE LOCALITY LIKE \"%" + country + "\" AND ";
-    query += "( S1_SPECIES = \""+species+"\" or S2_SPECIES = \""+species+"\" or S3_SPECIES = \""+species+"\" or S4_SPECIES = \""+species+"\") ";
+    query += "( S1_SPECIES LIKE \"%"+species+"%\" or S2_SPECIES LIKE \"%"+species+"%\" or S3_SPECIES LIKE \"%"+species+"%\" or S4_SPECIES LIKE \"%"+species+"%\" ) ";
     query += "AND ( NAME LIKE \"%"+sname+"%\" OR MINID LIKE \"%"+sminid+"%\" ) ";
     query += "ORDER BY " + orderby;
 
@@ -316,7 +325,7 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
     std::string query = "";
     if (minid_mod>0) {
         query += "UPDATE MINERALS SET ";
-        for (int i=0; i<data_header_size-1; i++) { query += data_header[i] + "=?, "; }
+        for (size_t i=0; i<data_header_size-1; i++) { query += data_header[i] + "=?, "; }
         query += data_header[data_header_size-1] + "=? ";
         query += "WHERE MINID=?;";
     } else {
@@ -324,10 +333,10 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
         if (minid_mod==-2) { query += "OR REPLACE "; }
         query += "INTO MINERALS (";
         if (minid_new>0) { query += "MINID, "; }
-        for (int i=1; i<data_header_size-1; i++) { query += data_header[i] + ", "; }
+        for (size_t i=1; i<data_header_size-1; i++) { query += data_header[i] + ", "; }
         query += data_header[data_header_size-1] + ") ";
         query += "VALUES (";
-        for (int i=1; i<data_header_size-1; i++) { query += "?,"; }
+        for (size_t i=1; i<data_header_size-1; i++) { query += "?,"; }
         if (minid_new>0) { query += "?,"; }
         query += "?);";
     }
@@ -348,7 +357,7 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
     }
 
     /* Bind all inputs */
-    for (int i=0; i<data_header_size-1; i++) {
+    for (size_t i=0; i<data_header_size-1; i++) {
         sqlite3_bind_text(stmt, ndx, data[i].c_str(), -1, SQLITE_TRANSIENT); ndx+=1;
     }
     if (minid_mod>=0) {
@@ -690,4 +699,106 @@ void db_generate_report(sqlite3* db, std::string db_file_path, std::string fname
     }
     return;
 }
+
+
+
+/*****************************************************************************
+    CSV Import/Export
+*****************************************************************************/
+
+/* CSV import -- Utility function: Check that the header file is correct */
+static bool db_csv_import_check(std::string filename, std::string *errmsg) {
+    std::ifstream f(filename);
+    aria::csv::CsvParser parser(f);
+    int index = 0;
+    for (;;) {
+        auto field = parser.next_field();
+        switch (field.type) {
+            case aria::csv::FieldType::DATA:
+                if (*field.data==data_header[index]) {
+                    index++;
+                } else {
+                    *errmsg = std::string("Column ") + std::to_string(index+1) + " should be " + data_header[index] + " but I got " + *field.data;
+                    return false;
+                }
+                break;
+            case aria::csv::FieldType::ROW_END:
+                return true;
+            case aria::csv::FieldType::CSV_END:
+                return false;
+        }
+    }
+    return false;
+}
+
+/* CSV import -- Utility function: Read all data from a CSV file */
+static bool db_csv_import_core(sqlite3 *db, std::string filename, std::string *errmsg, bool skip_miss_id) {
+    int success_id;
+    int ret;
+    int minid;
+    std::ifstream f(filename);
+    aria::csv::CsvParser parser(f);
+    std::vector<std::string> data;
+    int rowndx = 0;
+    for (auto& row : parser) {
+        rowndx++;
+        data.clear();
+        for (auto& field : row) {
+            data.push_back(field);
+        }
+        if (rowndx>1) {
+            ret = sscanf(data[0].c_str(), "%d", &minid);
+            if (ret!=1) minid = -1;
+            if (skip_miss_id) {
+                if (minid<0) continue;
+            } else {
+                if (minid>0) continue;
+            }
+            success_id = db_addmod_mineral(db, data, -2, errmsg);
+            if (success_id<-1) {
+                *errmsg = *errmsg + " While reading minid " + data[0] + " " + data[1];
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/* CSV import -- Main driver */
+bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg) {
+    if (!db_csv_import_check(filename, errmsg)) return false;
+    if (!db_csv_import_core(db, filename, errmsg, true)) return false;
+    if (!db_csv_import_core(db, filename, errmsg, false)) return false;
+    return true;
+}
+
+/* CSV export */
+bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg) {
+
+    std::ofstream csvfile;
+    csvfile.open(filename);
+    size_t data_header_size = data_header.size();
+
+    /* Write CSV header */
+    for (size_t i=0; i<data_header_size-1; i++) {
+        csvfile << data_header[i] << ",";
+    }
+    csvfile << data_header[data_header_size-1] << std::endl;
+
+    /* Loop over all minid and write data */
+    std::vector<int> minids = db_get_minid_list(db, 0, errmsg);
+    for (auto minid : minids) {
+        std::vector<std::string> data = db_get_data(db, minid, errmsg);
+        for (size_t i=0; i<data_header_size; i++) {
+            std::string s = db_get_field(data, data_header[i], false);
+            csvfile << "\"" << str_escape(s, '"', '"') << "\"";
+            if (i+1!=data_header_size) csvfile << ",";
+        }
+        csvfile << std::endl;
+    }
+
+    csvfile.close();
+    return true;
+}
+
 

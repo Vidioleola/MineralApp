@@ -1,7 +1,5 @@
 
-#include "addtodb.hpp"
 
-#include <vector>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -18,7 +16,6 @@
 #include "addmodframe.h"
 #include "genreportframe.h"
 #include "utils.h"
-#include "csv.hpp"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)

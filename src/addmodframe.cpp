@@ -1,5 +1,5 @@
 
-#include <vector>
+#include "mineraldb.hpp"
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -7,11 +7,8 @@
 #endif
 #include <wx/richtext/richtextctrl.h>
 
-#include <sqlite3.h> 
-
 #include "mainframe.h"
 #include "addmodframe.h"
-#include "addtodb.hpp"
 #include "utils.h"
 
 

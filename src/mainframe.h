@@ -1,20 +1,5 @@
 
-#if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
-  #if __has_include(<filesystem>)
-    #define GHC_USE_STD_FS
-  #endif
-#endif
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
-  #undef GHC_USE_STD_FS
-#endif
-#ifdef GHC_USE_STD_FS
-  #include <filesystem>
-  namespace fs = std::filesystem;
-#else
-  #include "filesystem.hpp"
-  namespace fs = ghc::filesystem;
-#endif
-
+#include "mineraldb.hpp"
 
 class MainFrame: public wxFrame {
     public:

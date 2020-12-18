@@ -1,4 +1,6 @@
 
+#include "mineraldb.hpp"
+
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
@@ -7,7 +9,6 @@
 #include <sqlite3.h> 
 
 #include "genreportframe.h"
-#include "addtodb.hpp"
 
 wxBEGIN_EVENT_TABLE(GenReportFrame, wxFrame)
     EVT_BUTTON(ID_GenReport_Save,   GenReportFrame::OnSave)

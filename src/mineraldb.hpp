@@ -1,12 +1,10 @@
 
+#ifndef MINERALDB
+#define MINERALDB
+
 #include <vector>
 #include <string>
-#include <cstring>
-#include <iostream>
-#include <fstream>
 #include <sqlite3.h> 
-#include "base64.h"
-#include "image.h"
 
 #if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
   #if __has_include(<filesystem>)
@@ -24,6 +22,7 @@
   namespace fs = ghc::filesystem;
 #endif
 
+
 static std::vector<std::string> data_header = {
     "MINID", "NAME", "LOCALITY", "LOCID_MNDAT", "SIZE", "WEIGHT", "ACQUISITION", "COLLECTION", "VALUE",
     "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
@@ -37,11 +36,14 @@ void db_initialize(sqlite3 **db, std::string *errmsg);
 void db_open(sqlite3 **db, std::string fname, std::string *errmsg);
 void db_save(sqlite3 *db, std::string fname, std::string *errmsg);
 void db_close(sqlite3 *db, std::string *errmsg);
+
 void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg);
 void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg);
+
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg);
 std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg);
 std::string db_get_field(std::vector<std::string> data, std::string field, bool remove_no=true);
+
 int db_get_field_index(std::string field);
 std::vector<int> db_get_minid_list(sqlite3 *db, int orderby, std::string *errmsg);
 std::vector<std::string> db_get_country_list(sqlite3 *db, std::string *errmsg);
@@ -49,5 +51,11 @@ std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg);
 std::vector<std::string> db_search_minerals(sqlite3 *db, std::string sname, std::string sminid, std::string country, std::string species, 
         std::string orderby, std::string *errmsg);
 std::vector<fs::path> db_get_datafile_list(std::string db_file_path, std::string minid);
+
 void db_generate_report(sqlite3* db, std::string fname, std::string db_path, bool fulldb, bool incdata, bool html, int selected_uid, std::string *errmsg);
+
+bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg);
+bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg);
+
+#endif
 

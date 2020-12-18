@@ -27,7 +27,7 @@ all: mineralapp
 endif
 ifeq ($(UNAME), Darwin)
 CXXFLAGS += `wx-config --cxxflags --static`
-CXXFLAGS += -mmacosx-version-min=10.12
+CXXFLAGS += -mmacosx-version-min=10.10
 LDFLAGS  += `wx-config --cxxflags --libs std,richtext --static`
 LDFLAGS  += /usr/local/Cellar/sqlite/3.34.0/lib/libsqlite3.a
 all: MineralApp.app
@@ -38,8 +38,8 @@ include version.in
 CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MINOR)"' -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION='"$(VERSION)"'
 
 # Compile source code, make mineralapp executable
-mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/genreportframe.o src/utils.o src/addtodb.o src/csv.o src/base64.o src/image.o
-	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/genreportframe.o src/utils.o src/addtodb.o src/csv.o src/base64.o src/image.o $(LDFLAGS) -o mineralapp
+mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/genreportframe.o src/utils.o src/mineraldb.o src/base64.o src/image.o
+	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/genreportframe.o src/utils.o src/mineraldb.o src/base64.o src/image.o $(LDFLAGS) -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
 src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h
@@ -50,11 +50,9 @@ src/genreportframe.o: src/genreportframe.cpp src/genreportframe.h
 	$(CXX) -c src/genreportframe.cpp -o src/genreportframe.o $(CXXFLAGS)
 src/utils.o: src/utils.cpp src/utils.h
 	$(CXX) -c src/utils.cpp -o src/utils.o $(CXXFLAGS)
-src/addtodb.o: src/addtodb.cpp
-	$(CXX) -c src/addtodb.cpp -o src/addtodb.o $(CXXFLAGS)
-src/csv.o: src/csv.cpp
-	$(CXX) -c src/csv.cpp -o src/csv.o $(CXXFLAGS)
-src/base64.o: src/base64.cpp
+src/mineraldb.o: src/mineraldb.cpp src/mineraldb.hpp
+	$(CXX) -c src/mineraldb.cpp -o src/mineraldb.o $(CXXFLAGS)
+src/base64.o: src/base64.cpp src/base64.h
 	$(CXX) -c src/base64.cpp -o src/base64.o $(CXXFLAGS)
 src/image.o: src/image.cpp src/image.h
 	$(CXX) -c src/image.cpp -o src/image.o $(CXXFLAGS)

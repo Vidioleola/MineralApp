@@ -195,6 +195,8 @@ void MainFrame::OnHelp(wxCommandEvent& event) {
 }
 
 void MainFrame::OnURL(wxTextUrlEvent& event) {
+    mineral_view->SetCaretPosition(0);
+    mineral_view->SetDefaultStyleToCursorStyle();
     wxLaunchDefaultBrowser(event.GetString());
 }
 
@@ -307,16 +309,33 @@ void MainFrame::draw_mineral_view(int minid) {
     
     /* ID */
     r->BeginBold();
-    r->WriteText("Unique ID      : ");
+    r->WriteText("Catalog Number   : ");
     r->EndBold();
-    r->WriteText(db_get_field(data, "MINID"));
+    r->WriteText(db_get_field(data, "ID"));
+    r->Newline();
+
+    /* minID */
+    wxString mindat_id = db_get_field(data, "MINID");
+    r->BeginBold();
+    r->WriteText("minID            : ");
+    r->EndBold();
+    if (mindat_id.size()>0) {
+        r->WriteText(mindat_id);
+        r->WriteText(" (");
+        r->BeginStyle(urlStyle);
+        r->BeginURL(wxString("https://www.mindat.org/")+mindat_id);
+        r->WriteText("See on MINDAT");
+        r->EndURL();
+        r->EndStyle();
+        r->WriteText(")");
+    }
     r->Newline();
 
     /* Locality */
     wxString locality = db_get_field(data, "LOCALITY");
-    wxString locid = db_get_field(data, "LOCID_MNDAT");
+    wxString locid = db_get_field(data, "LOCALITY_ID");
     r->BeginBold();
-    r->WriteText("Locality       : ");
+    r->WriteText("Locality         : ");
     r->EndBold();
     if (!locality.empty()) r->WriteText(locality);
     if (!locid.empty()) {
@@ -331,48 +350,87 @@ void MainFrame::draw_mineral_view(int minid) {
     r->Newline();
     
     /* Size, weight, acquisition, collection value */
-    wxString size = db_get_field(data, "SIZE");
-    wxString weight = db_get_field(data, "WEIGHT");
-    wxString acquisition = db_get_field(data, "ACQUISITION");
+    wxString size = db_get_fmt_size(data);
+    wxString weight = db_get_fmt_weight(data);
+    wxString acquisition = db_get_fmt_acquisition(data);
+    wxString deaccessioned = db_get_fmt_deaccessioned(data);
     wxString collection = db_get_field(data, "COLLECTION");
     wxString value = db_get_field(data, "VALUE");
-    r->BeginBold(); r->WriteText("Size           : "); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
-    r->BeginBold(); r->WriteText("Weight         : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
-    r->BeginBold(); r->WriteText("Acquisition    : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
-    r->BeginBold(); r->WriteText("Collection     : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
-    r->BeginBold(); r->WriteText("Value          : "); r->EndBold();
-    if (menuMineral->IsChecked(ID_HIDEVALUE)) r->WriteText("<hidden>");
-    else if (value.length()>0) r->WriteText(value);
+    wxString price = db_get_field(data, "PRICE");
+    r->BeginBold(); r->WriteText("Size             : "); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
+    r->BeginBold(); r->WriteText("Weight           : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
+    r->BeginBold(); r->WriteText("Acquisition      : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
+    r->BeginBold(); r->WriteText("Collection       : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
+    r->BeginBold(); r->WriteText("Estimated Value  : "); r->EndBold();
+    if (menuMineral->IsChecked(ID_HIDEVALUE)) {
+        r->WriteText("<hidden>");
+    } else if (value.size()>0) {
+        r->WriteText(value);
+        if (price.size()>0) {
+            r->WriteText(" (price paid: ");
+            r->WriteText(price);
+            r->WriteText(")");
+        }
+    } else if (price.size()>0) {
+        r->WriteText(price);
+    }
     r->Newline();
+    if (deaccessioned.size()>0) {
+        r->BeginBold(); r->WriteText("Deaccessioned    : "); r->EndBold(); r->WriteText(deaccessioned); r->Newline();
+    }
     r->Newline();
 
     /* Table of species */
-    write_table_row("Species        ", data, "SPECIES");
-    write_table_row("Class          ", data, "CLASS");
-    write_table_row_chemf("Chem. Formula  ", data);
-    write_table_row("Color          ", data, "COLOR");
-    write_table_row("Fluorescence SW", data, "FLSW");
-    write_table_row("Fluorescence MW", data, "FLMW");
-    write_table_row("Fluorescence LW", data, "FLLW");
-    write_table_row("Fluor. 405nm   ", data, "FL405");
-    write_table_row("Phosphor. SW   ", data, "PHSW");
-    write_table_row("Phosphor. MW   ", data, "PHMW");
-    write_table_row("Phosphor. LW   ", data, "PHLW");
-    write_table_row("Phosphor. 405nm", data, "PH405");
-    write_table_row("Tenebrescence  ", data, "TENEBR");
+    write_table_row("Species          ", data, "SPECIES");
+    write_table_row("Variety          ", data, "VARIETY");
+    write_table_row("Class            ", data, "CLASS");
+    write_table_row_chemf("Chem. Formula    ", data);
+    write_table_row("Color            ", data, "COLOR");
+    write_table_row("Transparency     ", data, "TRANSP");
+    write_table_row("Habit            ", data, "HABIT");
+    write_table_row("Fluorescence SW  ", data, "FLSW");
+    write_table_row("Fluorescence MW  ", data, "FLMW");
+    write_table_row("Fluorescence LW  ", data, "FLLW");
+    write_table_row("Fluor. 405nm     ", data, "FL405");
+    write_table_row("Phosphor. SW     ", data, "PHSW");
+    write_table_row("Phosphor. MW     ", data, "PHMW");
+    write_table_row("Phosphor. LW     ", data, "PHLW");
+    write_table_row("Phosphor. 405nm  ", data, "PH405");
+    write_table_row("Tenebrescence    ", data, "TENEBR");
+    write_table_row("Triboluminescence", data, "TRIBO");
     write_link_row(data);
     r->Newline();
 
     /* Radioactivity */
-    wxString radioact = db_get_field(data, "RADIOACT");
-    if (!radioact.empty()) {r->BeginBold(); r->WriteText("Radioactivity  : "); r->EndBold(); r->WriteText(radioact); r->Newline();}
+    wxString radioact = db_get_field(data, "RADIOACTIVITY");
+    if (!radioact.empty()) {
+        r->BeginBold(); r->WriteText("Radioactivity    : "); r->EndBold();
+        r->WriteText(radioact); r->Newline();
+        r->Newline();
+    }
 
     /* Comments */
-    wxString comments = db_get_field(data, "COMMENTS");
-    if (!comments.empty()) {r->BeginBold(); r->WriteText("Comments       : "); r->EndBold(); r->WriteText(comments); r->Newline();}
+    wxString description = db_get_field(data, "DESCRIPTION");
+    if (!description.empty()) {
+        r->BeginBold(); r->WriteText("Description: "); r->EndBold(); r->Newline();
+        r->WriteText(description); r->Newline();
+        r->Newline();
+    }
+    wxString notes = db_get_field(data, "NOTES");
+    if (!notes.empty()) {
+        r->BeginBold(); r->WriteText("Notes: "); r->EndBold(); r->Newline();
+        r->WriteText(notes); r->Newline();
+        r->Newline();
+    }
+    wxString owners = db_get_field(data, "OWNERS");
+    if (!owners.empty()) {
+        r->BeginBold(); r->WriteText("Previous owners: "); r->EndBold(); r->Newline();
+        r->WriteText(owners); r->Newline();
+        r->Newline();
+    }
 
     /* Data */
-    ReadData(db_get_field(data, "MINID"));
+    ReadData(db_get_field(data, "ID"));
 
     r->EndFont();
 
@@ -380,8 +438,8 @@ void MainFrame::draw_mineral_view(int minid) {
 }
 
 static inline int guess_column_width(std::vector<std::string> data, int column) {
-    std::vector<std::string> fields = { "SPECIES", "CLASS", "COLOR", "CHEMF", "FLSW", \
-        "FLMW", "FLLW", "FL405", "PHSW", "PHMW", "PHLW", "PH405", "TENEBR" };
+    std::vector<std::string> fields = { "SPECIES", "VARIETY", "CLASS", "COLOR", "CHEMF", "HABIT", "TRANSP", "FLSW", \
+        "FLMW", "FLLW", "FL405", "PHSW", "PHMW", "PHLW", "PH405", "TENEBR", "TRIBO" };
     int ln;
     int length = 16;
     for (auto field : fields) {
@@ -517,10 +575,18 @@ void MainFrame::write_link_row(std::vector<std::string> data) {
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
     wxRichTextCtrl *r = mineral_view;
-    wxString s1 = db_get_field(data, "S1_SPECIES");
-    wxString s2 = db_get_field(data, "S2_SPECIES");
-    wxString s3 = db_get_field(data, "S3_SPECIES");
-    wxString s4 = db_get_field(data, "S4_SPECIES");
+    wxString s1 = db_get_field(data, "S1_VARIETY");
+    wxString s2 = db_get_field(data, "S2_VARIETY");
+    wxString s3 = db_get_field(data, "S3_VARIETY");
+    wxString s4 = db_get_field(data, "S4_VARIETY");
+    if (s1=="No" || s1=="no") s1=wxString("");
+    if (s2=="No" || s2=="no") s2=wxString("");
+    if (s3=="No" || s3=="no") s3=wxString("");
+    if (s4=="No" || s4=="no") s4=wxString("");
+    if (s1.empty()) s1 = db_get_field(data, "S1_SPECIES");
+    if (s2.empty()) s2 = db_get_field(data, "S2_SPECIES");
+    if (s3.empty()) s3 = db_get_field(data, "S3_SPECIES");
+    if (s4.empty()) s4 = db_get_field(data, "S4_SPECIES");
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
@@ -534,7 +600,7 @@ void MainFrame::write_link_row(std::vector<std::string> data) {
     std::string s3p = url_encode(s3.ToStdString());
     std::string s4p = url_encode(s4.ToStdString());
     if (l1+l2+l3+l4>0) {
-        r->BeginBold(); r->WriteText("                 "); r->EndBold();
+        r->BeginBold(); r->WriteText("                   "); r->EndBold();
         r->BeginStyle(urlStyle); r->BeginURL(wxString("http://www.mindat.org/show.php?name=")+s1p);r->WriteText("M");r->EndURL();r->EndStyle();
         r->WriteText(" ");
         r->BeginStyle(urlStyle); r->BeginURL(wxString("https://rruff.info/")+s1p);r->WriteText("R");r->EndURL();r->EndStyle();
@@ -617,7 +683,7 @@ void MainFrame::populate_listbox() {
 
     std::string orderby;
     int orderby_int = mineral_orderby->GetSelection();
-    if (orderby_int==1) orderby="NAME"; else orderby="MINID";
+    if (orderby_int==1) orderby="NAME"; else orderby="ID";
     std::string searchstr = str_tolower(mineral_search->GetValue().ToStdString());
 
     int country_id = mineral_country->GetSelection();

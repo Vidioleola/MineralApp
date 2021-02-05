@@ -23,7 +23,21 @@ void db_initialize(sqlite3 **db, std::string *errmsg) {
         *errmsg += sqlite3_errmsg(*db);
         return;
     }
-    const char *query_minerals_create = "CREATE TABLE MINERALS (MINID INTEGER PRIMARY KEY, NAME TEXT NOT NULL, LOCALITY TEXT, LOCID_MNDAT TEXT, SIZE TEXT, WEIGHT TEXT, ACQUISITION TEXT, COLLECTION TEXT, VALUE TEXT, S1_SPECIES TEXT, S1_CLASS TEXT, S1_CHEMF TEXT, S1_COLOR TEXT, S1_FLSW TEXT, S1_FLMW TEXT, S1_FLLW TEXT, S1_FL405 TEXT, S1_PHSW TEXT, S1_PHMW TEXT, S1_PHLW TEXT, S1_PH405 TEXT, S1_TENEBR TEXT, S2_SPECIES TEXT, S2_CLASS TEXT, S2_CHEMF TEXT, S2_COLOR TEXT, S2_FLSW TEXT, S2_FLMW TEXT, S2_FLLW TEXT, S2_FL405 TEXT, S2_PHSW TEXT, S2_PHMW TEXT, S2_PHLW TEXT, S2_PH405 TEXT, S2_TENEBR TEXT, S3_SPECIES TEXT, S3_CLASS TEXT, S3_CHEMF TEXT, S3_COLOR TEXT, S3_FLSW TEXT, S3_FLMW TEXT, S3_FLLW TEXT, S3_FL405 TEXT, S3_PHSW TEXT, S3_PHMW TEXT, S3_PHLW TEXT, S3_PH405 TEXT, S3_TENEBR TEXT, S4_SPECIES TEXT, S4_CLASS TEXT, S4_CHEMF TEXT, S4_COLOR TEXT, S4_FLSW TEXT, S4_FLMW TEXT, S4_FLLW TEXT, S4_FL405 TEXT, S4_PHSW TEXT, S4_PHMW TEXT, S4_PHLW TEXT, S4_PH405 TEXT, S4_TENEBR TEXT, RADIOACT TEXT, COMMENTS TEXT );";
+    const char *query_minerals_create = "CREATE TABLE MINERALS (\
+        ID INTEGER PRIMARY KEY, MINID TEXT, NAME TEXT NOT NULL, LOCALITY TEXT, LOCALITY_ID TEXT, LOCALITY_LATITUDE TEXT, LOCALITY_LONGITUDE TEXT, \
+        LENGTH TEXT, WIDTH TEXT, HEIGHT TEXT, SIZE_UNITS TEXT, SIZE_CATEGORY TEXT, WEIGHT TEXT, WEIGHT_UNITS TEXT, \
+        ACQUISITION_YEAR TEXT, ACQUISITION_MONTH TEXT, ACQUISITION_DAY TEXT, ACQUISITION_SOURCE TEXT, SELFCOLLECTED TEXT, \
+        COLLECTION TEXT, VALUE TEXT, PRICE TEXT, \
+        DEACCESSIONED TEXT, DEACCESSIONED_TO TEXT, DEACCESSIONED_YEAR TEXT, DEACCESSIONED_MONTH TEXT, DEACCESSIONED_DAY TEXT, \
+        S1_SPECIES TEXT, S1_VARIETY TEXT, S1_CLASS TEXT, S1_CHEMF TEXT, S1_COLOR TEXT, S1_TRANSP TEXT, S1_HABIT TEXT, S1_FLSW TEXT, S1_FLMW TEXT, \
+            S1_FLLW TEXT, S1_FL405 TEXT, S1_PHSW TEXT, S1_PHMW TEXT, S1_PHLW TEXT, S1_PH405 TEXT, S1_TENEBR TEXT, S1_TRIBO TEXT, \
+        S2_SPECIES TEXT, S2_VARIETY TEXT, S2_CLASS TEXT, S2_CHEMF TEXT, S2_COLOR TEXT, S2_TRANSP TEXT, S2_HABIT TEXT, S2_FLSW TEXT, S2_FLMW TEXT, \
+            S2_FLLW TEXT, S2_FL405 TEXT, S2_PHSW TEXT, S2_PHMW TEXT, S2_PHLW TEXT, S2_PH405 TEXT, S2_TENEBR TEXT, S2_TRIBO TEXT, \
+        S3_SPECIES TEXT, S3_VARIETY TEXT, S3_CLASS TEXT, S3_CHEMF TEXT, S3_COLOR TEXT, S3_TRANSP TEXT, S3_HABIT TEXT, S3_FLSW TEXT, S3_FLMW TEXT, \
+            S3_FLLW TEXT, S3_FL405 TEXT, S3_PHSW TEXT, S3_PHMW TEXT, S3_PHLW TEXT, S3_PH405 TEXT, S3_TENEBR TEXT, S3_TRIBO TEXT, \
+        S4_SPECIES TEXT, S4_VARIETY TEXT, S4_CLASS TEXT, S4_CHEMF TEXT, S4_COLOR TEXT, S4_TRANSP TEXT, S4_HABIT TEXT, S4_FLSW TEXT, S4_FLMW TEXT, \
+            S4_FLLW TEXT, S4_FL405 TEXT, S4_PHSW TEXT, S4_PHMW TEXT, S4_PHLW TEXT, S4_PH405 TEXT, S4_TENEBR TEXT, S4_TRIBO TEXT, \
+        RADIOACTIVITY TEXT, RADIOACTIVITY_UNITS TEXT, DESCRIPTION TEXT, NOTES TEXT, OWNERS TEXT );";
     ret = sqlite3_exec(*db, query_minerals_create, NULL, 0, &errmsg_c);
     if (ret!=SQLITE_OK) {
         *errmsg += errmsg_c;
@@ -53,36 +67,159 @@ void db_initialize(sqlite3 **db, std::string *errmsg) {
     return;
 }
 
+/* Get version from db */
+static int db_get_version(sqlite3 *db) {
+    int major, minor;
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, "SELECT VERSION_MAJOR, VERSION_MINOR FROM SETTINGS", -1, &stmt, NULL);
+    int ret=sqlite3_step(stmt);
+    if (ret!=SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+    major = sqlite3_column_int(stmt, 0);
+    minor = sqlite3_column_int(stmt, 1);
+    sqlite3_finalize(stmt);
+    return major*100+minor;
+}
+
+/* Convert to string */
+template <typename T> std::string to_string(const T& t) {
+   std::ostringstream os;
+   os<<t;
+   return os.str();
+}
+
+/* Import Mineral DB version 2.0 */
+static void db_import_v200(sqlite3 **newdb, sqlite3 *olddb, std::string *errmsg) {
+
+    char u[512];
+    float l, w, h;
+    int ret;
+    std::string size, weight;
+
+    /* Initialize an empty new db */
+    db_initialize(newdb, errmsg);
+    if (errmsg->size()>0) {
+        return;
+    }
+    /* MINID has been changed to ID */
+    char *errmsg_c;
+    const char *query = "ALTER TABLE MINERALS RENAME COLUMN MINID to ID";
+    ret = sqlite3_exec(olddb, query, NULL, 0, &errmsg_c);
+    if (ret!=SQLITE_OK) {
+        *errmsg += "Import v2.0 failed! ";
+        *errmsg += errmsg_c;
+        sqlite3_free(errmsg_c);
+        return;
+    }
+
+    std::vector<int> ids = db_get_minid_list(olddb, 0, errmsg);
+    if (errmsg->size()>0) return;
+
+    std::vector<std::string> stay_the_same = {
+    "ID", "NAME", "LOCALITY", "COLLECTION", "VALUE",
+    "S1_SPECIES", "S1_CLASS", "S1_CHEMF", "S1_COLOR", "S1_FLSW", "S1_FLMW", "S1_FLLW", "S1_FL405", "S1_PHSW", "S1_PHMW", "S1_PHLW", "S1_PH405", "S1_TENEBR",
+    "S2_SPECIES", "S2_CLASS", "S2_CHEMF", "S2_COLOR", "S2_FLSW", "S2_FLMW", "S2_FLLW", "S2_FL405", "S2_PHSW", "S2_PHMW", "S2_PHLW", "S2_PH405", "S2_TENEBR",
+    "S3_SPECIES", "S3_CLASS", "S3_CHEMF", "S3_COLOR", "S3_FLSW", "S3_FLMW", "S3_FLLW", "S3_FL405", "S3_PHSW", "S3_PHMW", "S3_PHLW", "S3_PH405", "S3_TENEBR",
+    "S4_SPECIES", "S4_CLASS", "S4_CHEMF", "S4_COLOR", "S4_FLSW", "S4_FLMW", "S4_FLLW", "S4_FL405", "S4_PHSW", "S4_PHMW", "S4_PHLW", "S4_PH405", "S4_TENEBR",
+    };
+
+    for (int id : ids) {
+        std::vector<std::string> olddata;
+        std::vector<std::string> newdata(data_header.size());
+
+        olddata = db_get_data(olddb, id, errmsg, 200);
+        if (errmsg->size()>0) return;
+
+        // These fields stayed the same
+        for (auto field : stay_the_same) {
+            newdata[db_get_field_index(field)] = olddata[db_get_field_index_200(field)];
+        }
+
+        // These fields were renamed
+        newdata[db_get_field_index("LOCALITY_ID")] = olddata[db_get_field_index_200("LOCID_MNDAT")];
+        newdata[db_get_field_index("ACQUISITION_SOURCE")] = olddata[db_get_field_index_200("ACQUISITION")];
+        newdata[db_get_field_index("RADIOACTIVITY")] = olddata[db_get_field_index_200("RADIOACT")];
+        newdata[db_get_field_index("NOTES")] = olddata[db_get_field_index_200("COMMENTS")];
+
+        // Try to parse SIZE into LENGTH, WIDTH, HEIGHT, SIZE_UNIT
+        size = olddata[db_get_field_index_200("SIZE")];
+        ret = sscanf(size.c_str(), "%fx%fx%f%510[^\n]", &l, &w, &h, u);
+        if (ret!=4) ret = sscanf(size.c_str(), "%f x %f x %f %510[^\n]", &l, &w, &h, u);
+        if (ret==4) {
+            newdata[db_get_field_index("LENGTH")] = to_string(l);
+            newdata[db_get_field_index("WIDTH")] = to_string(w);
+            newdata[db_get_field_index("HEIGHT")] = to_string(h);
+            newdata[db_get_field_index("SIZE_UNITS")] = std::string(u);
+        } else {
+            newdata[db_get_field_index("SIZE_UNITS")] = size;
+        }
+
+        // Try to parse weight
+        weight = olddata[db_get_field_index_200("WEIGHT")];
+        ret = sscanf(weight.c_str(), "%f%510[^\n]", &w, u);
+        if (ret==2) {
+            newdata[db_get_field_index("WEIGHT")] = to_string(w);
+            newdata[db_get_field_index("WEIGHT_UNITS")] = ((strlen(u)>1 && u[0]==' ') ? u+1 : u);
+        } else {
+            newdata[db_get_field_index("WEIGHT")] = weight;
+        }
+
+        // Everything done! Save the new data into the db
+        db_addmod_mineral(*newdb, newdata, -1, errmsg);
+    }
+}
+
 
 /* Open db from file */
 void db_open(sqlite3 **db, std::string fname, std::string *errmsg) {
 
     int ret;
 
-    /* Open the db from file */
+    /* Open the db from file into temporary db */
     sqlite3 *db_tmp;
     ret = sqlite3_open(fname.c_str(), &db_tmp);
     if (ret!=SQLITE_OK) {
         *errmsg += "Failed to open file for reading!";
         return;
     }
-    /* Create a new db in memory */
-    ret = sqlite3_open(":memory:", db);
+
+    /* Make an in-memory copy */
+    sqlite3 *db_mem;
+    ret = sqlite3_open(":memory:", &db_mem);
     if (ret!=SQLITE_OK) {
         *errmsg += "Can't create memory database: ";
-        *errmsg += sqlite3_errmsg(*db);
+        *errmsg += sqlite3_errmsg(db_mem);
+        sqlite3_close(db_tmp);
         return;
     }
-    /* Make the copy */
     sqlite3_backup *bkp;
-    bkp = sqlite3_backup_init(*db, "main", db_tmp, "main");
+    bkp = sqlite3_backup_init(db_mem, "main", db_tmp, "main");
     if (!bkp) {
         *errmsg += "Failed to backup file!";
+        sqlite3_close(db_tmp);
+        sqlite3_close(db_mem);
         return;
     }
     sqlite3_backup_step(bkp, -1);
     sqlite3_backup_finish(bkp);
     sqlite3_close(db_tmp);
+
+    /* Get version */
+    int dbversion = db_get_version(db_mem);
+    if (dbversion<0) {
+        *errmsg = "Couldn't get DB version from file. Cannot parse it.";
+        sqlite3_close(db_mem);
+        return;
+    }
+
+    /* Do the job */
+    if (dbversion==200) {
+        db_import_v200(db, db_mem, errmsg);
+    } else {
+        *db = db_mem;
+    }
 
     return;
 }
@@ -141,7 +278,7 @@ void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg) {
 void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg) {
     std::string  query = " \
         CREATE TEMPORARY TABLE temp_table as SELECT * FROM  MINERALS WHERE minid=" + std::to_string(minid) + "; \
-        UPDATE temp_table SET MINID=NULL; \
+        UPDATE temp_table SET ID=NULL; \
         INSERT INTO MINERALS SELECT * FROM temp_table; \
         DROP TABLE temp_table; \
     ";
@@ -158,8 +295,15 @@ void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg) {
 
 /* Get the index of a given field from the data_header vector */
 int db_get_field_index(std::string field) {
-    auto it = find(data_header.begin(), data_header.end(), field);
-    if (it != data_header.end()) return distance(data_header.begin(), it);
+    std::vector<std::string> header = data_header;
+    auto it = find(header.begin(), header.end(), field);
+    if (it != header.end()) return distance(header.begin(), it);
+    else return -1;
+}
+int db_get_field_index_200(std::string field) {
+    std::vector<std::string> header = data_header_200;
+    auto it = find(header.begin(), header.end(), field);
+    if (it != header.end()) return distance(header.begin(), it);
     else return -1;
 }
 
@@ -175,19 +319,25 @@ std::string db_get_field(std::vector<std::string> data, std::string field, bool 
 }
 
 /* Get all data relative to a minid from the db */
-std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg) {
+std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg, int header_version) {
     std::vector<std::string> data;
     if (minid<0) {
-        *errmsg += "MINID is negative. It should be positive...";
+        *errmsg += "ID is negative. It should be positive...";
         return data;
     }
-    std::string query = "SELECT ";
-    size_t data_header_size = data_header.size();
-    for (size_t i=0; i<data_header_size; i++) {
-        query += data_header[i];
-        if (i<data_header_size-1) query += ", ";
+    std::vector<std::string> header;
+    if (header_version==200) {
+        header = data_header_200;
+    } else {
+        header = data_header;
     }
-    query += " FROM MINERALS WHERE MINID=?";
+    size_t header_size = header.size();
+    std::string query = "SELECT ";
+    for (size_t i=0; i<header_size; i++) {
+        query += header[i];
+        if (i<header_size-1) query += ", ";
+    }
+    query += " FROM MINERALS WHERE ID=?";
     sqlite3_stmt *stmt;
     sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
     sqlite3_bind_int(stmt, 1, minid);
@@ -197,7 +347,7 @@ std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg
         sqlite3_finalize(stmt);
         return data;
     }
-    for (size_t i=0; i<data_header.size(); i++) {
+    for (size_t i=0; i<header.size(); i++) {
         const unsigned char *uc = sqlite3_column_text(stmt, i);
         std::string tmp = "";
         if (uc!=NULL) tmp=(const char*)uc;
@@ -212,9 +362,9 @@ std::vector<int> db_get_minid_list(sqlite3 *db, int orderby, std::string *errmsg
     std::vector<int> minids;
     const char *query;
     if (orderby==1) {
-        query = "SELECT MINID FROM MINERALS ORDER BY NAME";
+        query = "SELECT ID FROM MINERALS ORDER BY NAME";
     } else {
-        query = "SELECT MINID FROM MINERALS ORDER BY MINID";
+        query = "SELECT ID FROM MINERALS ORDER BY ID";
     }
     int ret;
     sqlite3_stmt *stmt;
@@ -247,10 +397,13 @@ std::vector<int> db_get_minid_list(sqlite3 *db, int orderby, std::string *errmsg
 std::vector<std::string> db_search_minerals(sqlite3 *db, std::string sname, std::string sminid, std::string country, std::string species, 
         std::string orderby, std::string *errmsg) {
 
-    std::string query = "SELECT MINID, NAME FROM MINERALS ";
+    std::string query = "SELECT ID, NAME FROM MINERALS ";
     query += "WHERE LOCALITY LIKE \"%" + country + "\" AND ";
-    query += "( S1_SPECIES LIKE \"%"+species+"%\" or S2_SPECIES LIKE \"%"+species+"%\" or S3_SPECIES LIKE \"%"+species+"%\" or S4_SPECIES LIKE \"%"+species+"%\" ) ";
-    query += "AND ( NAME LIKE \"%"+sname+"%\" OR MINID LIKE \"%"+sminid+"%\" ) ";
+    query += "( S1_SPECIES LIKE \"%"+species+"%\" or S2_SPECIES LIKE \"%"+species+"%\"";
+    query += " or S3_SPECIES LIKE \"%"+species+"%\" or S4_SPECIES LIKE \"%"+species+"%\"";
+    query += " or S1_VARIETY LIKE \"%"+species+"%\" or S2_VARIETY LIKE \"%"+species+"%\"";
+    query += " or S3_VARIETY LIKE \"%"+species+"%\" or S4_VARIETY LIKE \"%"+species+"%\" ) ";
+    query += "AND ( NAME LIKE \"%"+sname+"%\" OR ID LIKE \"%"+sminid+"%\" ) ";
     query += "ORDER BY " + orderby;
 
     std::vector<std::string> results;
@@ -306,6 +459,113 @@ std::vector<fs::path> db_get_datafile_list(std::string db_file_path, std::string
     return files;
 }
 
+/* Get a formatted string for the size of a specimen */
+std::string db_get_fmt_size(std::vector<std::string> data) {
+    std::string l = db_get_field(data, "LENGTH");
+    std::string w = db_get_field(data, "WIDTH");
+    std::string h = db_get_field(data, "HEIGHT");
+    std::string u = db_get_field(data, "SIZE_UNITS");
+    std::string c = db_get_field(data, "SIZE_CATEGORY");
+    std::string size;
+    if (l.size()>0) size += l;
+    if (w.size()>0) {
+        if (size.size()>0) size += " x ";
+        size += w;
+    }
+    if (h.size()>0) {
+        if (size.size()>0) size += " x ";
+        size += h;
+    }
+    if (u.size()>0) {
+        if (size.size()>0) size += " ";
+        size += u;
+    }
+    if (c.size()>0) {
+        if (size.size()>0) size += " - ";
+        size += c;
+    }
+    return size;
+}
+
+/* Get a formatted string for the weight of a specimen */
+std::string db_get_fmt_weight(std::vector<std::string> data) {
+    std::string w = db_get_field(data, "WEIGHT");
+    std::string u = db_get_field(data, "WEIGHT_UNITS");
+    std::string weight = w;
+    if (weight.size()>0) weight += " ";
+    weight += u;
+    return weight;
+}
+
+/* Get a formatted string for the acquisition date & source */
+std::string db_get_fmt_acquisition(std::vector<std::string> data) {
+    std::string y = db_get_field(data, "ACQUISITION_YEAR");
+    std::string m = db_get_field(data, "ACQUISITION_MONTH");
+    std::string d = db_get_field(data, "ACQUISITION_DAY");
+    std::string s = db_get_field(data, "ACQUISITION_SOURCE");
+    std::string self = db_get_field(data, "SELFCOLLECTED");
+    std::string a;
+    std::vector<std::string> months = {"January", "February", "March", "April",
+        "May", "June", "July", "August", "September", "October", "November", "December"};
+    if (d.size()>0) a += d + " ";
+    if (m.size()>0) {
+        int mm, ret;
+        ret = sscanf(m.c_str(), "%d", &mm);
+        if (ret==1 and to_string(mm)==m) {
+            if (mm>=0 and mm<12) {
+                a += months[mm] + " ";
+            } else {
+                a += m + " ";
+            }
+        } else {
+            a += m + " ";
+        }
+    }
+    if (y.size()>0) a += y;
+    if (s.size()>0) {
+        if (a.size()>0) a += "; ";
+        a += s;
+    }
+    if (self=="1") {
+        if (a.size()>0) a += " ";
+        a += "self-collected";
+    }
+    return a;
+}
+
+/* Get a formatted string for the deaccessioned date */
+std::string db_get_fmt_deaccessioned(std::vector<std::string> data) {
+    std::string y = db_get_field(data, "DEACCESSIONED_YEAR");
+    std::string m = db_get_field(data, "DEACCESSIONED_MONTH");
+    std::string d = db_get_field(data, "DEACCESSIONED_DAY");
+    std::string s = db_get_field(data, "DEACCESSIONED_TO");
+    std::string a;
+    std::vector<std::string> months = {"January", "February", "March", "April",
+        "May", "June", "July", "August", "September", "October", "November", "December"};
+    if (d.size()>0) a += d + " ";
+    if (m.size()>0) {
+        int mm, ret;
+        ret = sscanf(m.c_str(), "%d", &mm);
+        if (ret==1 and to_string(mm)==m) {
+            if (mm>=0 and mm<12) {
+                a += months[mm] + " ";
+            } else {
+                a += m + " ";
+            }
+        } else {
+            a += m + " ";
+        }
+    }
+    if (y.size()>0) a += y;
+    if (s.size()>0) {
+        if (a.size()>0) a += "; ";
+        a += s;
+    }
+    return a;
+}
+
+
+
 /* Insert a new mineral or modify an existing one */
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg) {
 
@@ -329,12 +589,12 @@ int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod,
         query += "UPDATE MINERALS SET ";
         for (size_t i=0; i<data_header_size-1; i++) { query += data_header[i] + "=?, "; }
         query += data_header[data_header_size-1] + "=? ";
-        query += "WHERE MINID=?;";
+        query += "WHERE ID=?;";
     } else {
         query += "INSERT ";
         if (minid_mod==-2) { query += "OR REPLACE "; }
         query += "INTO MINERALS (";
-        if (minid_new>0) { query += "MINID, "; }
+        if (minid_new>0) { query += "ID, "; }
         for (size_t i=1; i<data_header_size-1; i++) { query += data_header[i] + ", "; }
         query += data_header[data_header_size-1] + ") ";
         query += "VALUES (";
@@ -419,7 +679,7 @@ std::vector<std::string> db_get_country_list(sqlite3 *db, std::string *errmsg) {
 std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg) {
 
     std::vector<std::string> specieslst;
-    const char *query = "SELECT S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES FROM MINERALS";
+    const char *query = "SELECT S1_SPECIES,S2_SPECIES,S3_SPECIES,S4_SPECIES,S1_VARIETY,S2_VARIETY,S3_VARIETY,S4_VARIETY FROM MINERALS";
     int ret;
     sqlite3_stmt *stmt;
     ret = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
@@ -429,7 +689,7 @@ std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg) {
     }
     std::string species = "";
     while ((ret=sqlite3_step(stmt))==SQLITE_ROW) {
-        for (int i=0; i<4; i++) {
+        for (int i=0; i<8; i++) {
             const unsigned char *uc = sqlite3_column_text(stmt, i);
             species = "";
             if (uc!=NULL) species = (const char*)uc;
@@ -463,28 +723,32 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
     html += "<col style=\"width:20%\">";
     html += "</colgroup>\n";
     html += "<tbody>\n";
-    html += "<tr><td><b>Unique ID:</b></td><td colspan=\"4\">" + db_get_field(data, "MINID") + "</td></tr>\n";
+    html += "<tr><td><b>Unique ID:</b></td><td colspan=\"4\">" + db_get_field(data, "ID") + "</td></tr>\n";
     tmp = db_get_field(data, "LOCALITY");
     if (tmp.size()>0) {
         html += "<tr><td><b>Locality:</b></td><td colspan=\"4\">" + db_get_field(data, "LOCALITY");
-        tmp = db_get_field(data, "LOCID_MNDAT");
+        tmp = db_get_field(data, "LOCALITY_ID");
         if (tmp.size()>0) {
             html += " <a href=\"https://www.mindat.org/loc-" + tmp + ".html\" target=\"_blank\">";
             html += "(mindat: " + tmp +")";
         }
         html += "</td></tr>\n";
     }
-    tmp = db_get_field(data, "SIZE");
+    tmp = db_get_fmt_size(data);
     if (tmp.size()>0) {
         html += "<tr><td><b>Size:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
-    tmp = db_get_field(data, "WEIGHT");
+    tmp = db_get_fmt_weight(data);
     if (tmp.size()>0) {
         html += "<tr><td><b>Weight:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
-    tmp = db_get_field(data, "ACQUISITION");
+    tmp = db_get_fmt_acquisition(data);
     if (tmp.size()>0) {
         html += "<tr><td><b>Acquisition:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
+    }
+    tmp = db_get_fmt_deaccessioned(data);
+    if (tmp.size()>0) {
+        html += "<tr><td><b>Deaccessioned:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
     tmp = db_get_field(data, "COLLECTION");
     if (tmp.size()>0) {
@@ -493,6 +757,10 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
     tmp = db_get_field(data, "VALUE");
     if (tmp.size()>0) {
         html += "<tr><td><b>Value:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
+    }
+    tmp = db_get_field(data, "PRICE");
+    if (tmp.size()>0) {
+        html += "<tr><td><b>Price:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
 
     /* Species */
@@ -556,11 +824,11 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
     }
 
     /* Radioactivity and Comments */
-    tmp = db_get_field(data, "RADIOACT");
+    tmp = db_get_field(data, "RADIOACTIVITY");
     if (tmp.size()>0) {
         html += "<tr><td><b>Radioactive:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
-    tmp = db_get_field(data, "COMMENTS");
+    tmp = db_get_field(data, "NOTES");
     if (tmp.size()>0) {
         html += "<tr><td><b>Notes:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }

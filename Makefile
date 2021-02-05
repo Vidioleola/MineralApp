@@ -42,11 +42,11 @@ mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/genreportframe.o src
 	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/genreportframe.o src/mineraldb.o src/base64.o src/image.o $(LDFLAGS) -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
-src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h
+src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h src/mineraldb.hpp
 	$(CXX) -c src/mainframe.cpp -o src/mainframe.o $(CXXFLAGS)
-src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h
+src/addmodframe.o: src/addmodframe.cpp src/mainframe.h src/addmodframe.h src/mineraldb.hpp
 	$(CXX) -c src/addmodframe.cpp -o src/addmodframe.o $(CXXFLAGS)
-src/genreportframe.o: src/genreportframe.cpp src/genreportframe.h
+src/genreportframe.o: src/genreportframe.cpp src/genreportframe.h src/mineraldb.hpp
 	$(CXX) -c src/genreportframe.cpp -o src/genreportframe.o $(CXXFLAGS)
 src/mineraldb.o: src/mineraldb.cpp src/mineraldb.hpp
 	$(CXX) -c src/mineraldb.cpp -o src/mineraldb.o $(CXXFLAGS)

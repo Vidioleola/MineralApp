@@ -277,7 +277,7 @@ void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg) {
 /* Duplicate the specified minid */
 void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg) {
     std::string  query = " \
-        CREATE TEMPORARY TABLE temp_table as SELECT * FROM  MINERALS WHERE minid=" + std::to_string(minid) + "; \
+        CREATE TEMPORARY TABLE temp_table as SELECT * FROM MINERALS WHERE ID=" + std::to_string(minid) + "; \
         UPDATE temp_table SET ID=NULL; \
         INSERT INTO MINERALS SELECT * FROM temp_table; \
         DROP TABLE temp_table; \

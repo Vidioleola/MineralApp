@@ -642,7 +642,6 @@ void MainFrame::ReadData(std::string uid) {
     wxRichTextCtrl *r = mineral_view;
     int width, height;
     float scale;
-    r->Newline();
 
     r->BeginBold(); r->WriteText("Figures & Data :"); r->EndBold();
     r->Newline();

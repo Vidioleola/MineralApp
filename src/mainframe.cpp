@@ -130,6 +130,8 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
     if (openFileDialog.ShowModal()==wxID_CANCEL) {
         return;
     }
+    mineral_listbox->Clear();
+    mineral_view->Clear();
     std::string fname = openFileDialog.GetPath().ToStdString();
     std::string errmsg;
     db_open(&db, fname, &errmsg);
@@ -156,6 +158,8 @@ void MainFrame::OnSave(wxCommandEvent& event) {
     if (errmsg.size()>0) {
         wxLogMessage(wxString(errmsg));
     }
+    db_file_path = fs::path(fname);
+    write_config();
 }
 
 void MainFrame::OnClose(wxCommandEvent& event) {
@@ -169,6 +173,7 @@ void MainFrame::OnClose(wxCommandEvent& event) {
         return;
     }
     db = NULL;
+    db_file_path = "";
     mineral_listbox->Clear();
     mineral_view->Clear();
 }

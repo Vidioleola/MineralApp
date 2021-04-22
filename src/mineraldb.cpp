@@ -263,7 +263,7 @@ void db_close(sqlite3 *db, std::string *errmsg) {
 
 /* Delete a mineral from the database */
 void db_delete_mineral(sqlite3 *db, int minid, std::string *errmsg) {
-    std::string query = "DELETE FROM MINERALS WHERE minid=" + std::to_string(minid);
+    std::string query = "DELETE FROM MINERALS WHERE ID=" + std::to_string(minid);
     char *errmsg_c;
     int ret = sqlite3_exec(db, query.c_str(), NULL, 0, &errmsg_c);
     if (ret!=SQLITE_OK) {

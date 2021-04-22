@@ -63,14 +63,15 @@
     <ClCompile Include="..\src\app.cpp" />
     <ClCompile Include="..\src\base64.cpp" />
     <ClCompile Include="..\src\genreportframe.cpp" />
+    <ClCompile Include="..\src\image.cpp" />
     <ClCompile Include="..\src\mainframe.cpp" />
     <ClCompile Include="..\src\addmodframe.cpp" />
-    <ClCompile Include="..\src\utils.cpp" />
     <ClCompile Include="..\src\mineraldb.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\base64.h" />
     <ClInclude Include="..\src\genreportframe.h" />
+    <ClInclude Include="..\src\image.h" />
     <ClInclude Include="..\src\mainframe.h" />
     <ClInclude Include="..\src\addmodframe.h" />
     <ClInclude Include="..\src\utils.h" />

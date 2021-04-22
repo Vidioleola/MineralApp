@@ -1,12 +1,11 @@
 
-#include "mineraldb.hpp"
-
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
 #include <wx/richtext/richtextctrl.h>
 
+#include "mineraldb.hpp"
 #include "mainframe.h"
 #include "addmodframe.h"
 

@@ -1,13 +1,10 @@
 
-#include "mineraldb.hpp"
-
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
 
-#include <sqlite3.h> 
-
+#include "mineraldb.hpp"
 #include "genreportframe.h"
 
 wxBEGIN_EVENT_TABLE(GenReportFrame, wxFrame)

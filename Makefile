@@ -29,7 +29,7 @@ ifeq ($(UNAME), Darwin)
 CXXFLAGS += `wx-config --cxxflags --static`
 CXXFLAGS += -mmacosx-version-min=10.10
 LDFLAGS  += `wx-config --cxxflags --libs std,richtext --static`
-LDFLAGS  += /usr/local/Cellar/sqlite/3.35.4/lib/libsqlite3.a
+LDFLAGS  += /usr/local/Cellar/sqlite/3.36.0/lib/libsqlite3.a
 LDFLAGS  += /usr/local/Cellar/libpng/1.6.37/lib/libpng.a
 LDFLAGS  += /usr/local/Cellar/zlib/1.2.11/lib/libz.a
 all: MineralApp.app

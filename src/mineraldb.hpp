@@ -72,8 +72,9 @@ std::string db_get_fmt_size(std::vector<std::string> data);
 std::string db_get_fmt_weight(std::vector<std::string> data);
 std::string db_get_fmt_acquisition(std::vector<std::string> data);
 std::string db_get_fmt_deaccessioned(std::vector<std::string> data);
+std::string db_get_fmt_value(std::vector<std::string> data, bool hidden);
 
-void db_generate_report(sqlite3* db, std::string fname, std::string db_path, bool fulldb, bool incdata, bool html, int selected_uid, std::string *errmsg);
+void db_generate_report(sqlite3* db, std::string fname, std::string db_path, bool fulldb, bool incdata, int selected_uid, std::string *errmsg);
 
 bool db_csv_import(sqlite3 *db, std::string filename, std::string *errmsg);
 bool db_csv_export(sqlite3 *db, std::string filename, std::string *errmsg);
@@ -82,6 +83,7 @@ std::string url_encode(const std::string &value);
 std::string str_escape(const std::string &value, char to_escape, char escape_with);
 std::string str_tolower(std::string s);
 std::string strip_unicode(std::string &str);
+std::string html_escape(std::string s);
 
 #endif
 

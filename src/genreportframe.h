@@ -6,7 +6,6 @@ class GenReportFrame: public wxFrame {
         sqlite3 *db;
         wxRadioButton *rb1a, *rb1b;
         wxRadioButton *rb2a, *rb2b;
-        wxRadioButton *rb3a, *rb3b;
         int selected_uid;
         std::string db_path;
         void OnSave(wxCommandEvent& event);

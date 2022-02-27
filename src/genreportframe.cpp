@@ -38,12 +38,9 @@ GenReportFrame::GenReportFrame(wxFrame *parent, const wxString& title, sqlite3 *
     wxStaticText  *lab2 = new wxStaticText(this, -1, "Do you want to include the images and data?");
     rb2a = new wxRadioButton(this, -1, "Yes, please include the images and data", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     rb2b = new wxRadioButton(this, -1, "No, thanks", wxDefaultPosition, wxDefaultSize);
-    wxStaticText  *lab3 = new wxStaticText(this, -1, "Do you prefer a report in HTML or MHT format?");
-    rb3a = new wxRadioButton(this, -1, "HTML: images and data will be linked, filesize is small, view and print using any internet browser", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    rb3b = new wxRadioButton(this, -1, "MHT: images and data will be embedded, filesize could be huge, you can open and modify it in Microsoft Word", wxDefaultPosition, wxDefaultSize);
+    wxStaticText  *lab3 = new wxStaticText(this, -1, "The generated HTML report can be opened in any internet browser, or also in Microsoft Word.");
     rb1b->SetValue(true);
     rb2a->SetValue(true);
-    rb3b->SetValue(true);
     vsizer->Add(lab1, 0, wxEXPAND|wxALL, border);
     vsizer->Add(rb1a, 0, wxEXPAND|wxALL, border);
     vsizer->Add(rb1b, 0, wxEXPAND|wxALL, border);
@@ -51,8 +48,6 @@ GenReportFrame::GenReportFrame(wxFrame *parent, const wxString& title, sqlite3 *
     vsizer->Add(rb2a, 0, wxEXPAND|wxALL, border);
     vsizer->Add(rb2b, 0, wxEXPAND|wxALL, border);
     vsizer->Add(lab3, 0, wxEXPAND|wxALL, border);
-    vsizer->Add(rb3a, 0, wxEXPAND|wxALL, border);
-    vsizer->Add(rb3b, 0, wxEXPAND|wxALL, border);
 
     /* ok cancel buttons */
     wxBoxSizer *hsizer_buttons = new wxBoxSizer(wxHORIZONTAL);
@@ -72,26 +67,20 @@ void GenReportFrame::OnSave(wxCommandEvent& event) {
 
     bool fulldb = rb1a->GetValue();
     bool include_data = rb2a->GetValue();
-    bool html = rb3a->GetValue();
     if (selected_uid<0 && !fulldb) {
         wxLogMessage("Sorry, no mineral was selected. Select one from the left panel.");
         Close(true);
     }
     std::string default_fname;
     std::string default_extension;
-    if (html) {
-        default_fname = "report.html";
-        default_extension = "HTML files (*.html)|*.html";
-    } else {
-        default_fname = "report.mht";
-        default_extension = "MHT files (*.mht)|*.mht";
-    }
+    default_fname = "report.html";
+    default_extension = "HTML files (*.html)|*.html";
     wxFileDialog *save_report = new wxFileDialog(this, "Generate Report", wxEmptyString, default_fname, default_extension, wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
     if (save_report->ShowModal() == wxID_CANCEL) {
         Close(true);
     }
     std::string errmsg;
-    db_generate_report(db, db_path, save_report->GetPath().ToStdString(), fulldb, include_data, html, selected_uid, &errmsg);
+    db_generate_report(db, db_path, save_report->GetPath().ToStdString(), fulldb, include_data, selected_uid, &errmsg);
     if (errmsg.size()>0) {
         wxLogMessage(wxString("Writing failed!\n" + errmsg));
     }

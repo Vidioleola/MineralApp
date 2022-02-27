@@ -191,7 +191,7 @@ void MainFrame::OnAbout(wxCommandEvent& event) {
         "your minerals. You can add your mineral collection, storing any details "
         "you are interested in, helping you (hopefully...) to keep your mineral "
         "collection well organized!");
-    info.SetCopyright("(C) 2019-2020 Simone Conti <3dz2.com/mineralapp/>");
+    info.SetCopyright("(C) 2019-2022 Simone Conti <3dz2.com/mineralapp/>");
     wxAboutBox(info);
 }
 
@@ -360,26 +360,12 @@ void MainFrame::draw_mineral_view(int minid) {
     wxString acquisition = db_get_fmt_acquisition(data);
     wxString deaccessioned = db_get_fmt_deaccessioned(data);
     wxString collection = db_get_field(data, "COLLECTION");
-    wxString value = db_get_field(data, "VALUE");
-    wxString price = db_get_field(data, "PRICE");
+    wxString value = db_get_fmt_value(data, menuMineral->IsChecked(ID_HIDEVALUE));
     r->BeginBold(); r->WriteText("Size             : "); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
     r->BeginBold(); r->WriteText("Weight           : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
     r->BeginBold(); r->WriteText("Acquisition      : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
     r->BeginBold(); r->WriteText("Collection       : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
-    r->BeginBold(); r->WriteText("Estimated Value  : "); r->EndBold();
-    if (menuMineral->IsChecked(ID_HIDEVALUE)) {
-        r->WriteText("<hidden>");
-    } else if (value.size()>0) {
-        r->WriteText(value);
-        if (price.size()>0) {
-            r->WriteText(" (price paid: ");
-            r->WriteText(price);
-            r->WriteText(")");
-        }
-    } else if (price.size()>0) {
-        r->WriteText(price);
-    }
-    r->Newline();
+    r->BeginBold(); r->WriteText("Estimated Value  : "); r->EndBold(); if (value.length()>0) r->WriteText(value); r->Newline();
     if (deaccessioned.size()>0) {
         r->BeginBold(); r->WriteText("Deaccessioned    : "); r->EndBold(); r->WriteText(deaccessioned); r->Newline();
     }

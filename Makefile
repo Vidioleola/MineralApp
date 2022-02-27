@@ -40,8 +40,8 @@ include version.in
 CXXFLAGS += -DVERSION_MAJOR='"$(VERSION_MAJOR)"' -DVERSION_MINOR='"$(VERSION_MINOR)"' -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION='"$(VERSION)"'
 
 # Compile source code, make mineralapp executable
-mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/genreportframe.o src/mineraldb.o src/base64.o src/image.o
-	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/genreportframe.o src/mineraldb.o src/base64.o src/image.o $(LDFLAGS) -o mineralapp
+mineralapp: src/app.o src/addmodframe.o src/mainframe.o src/genreportframe.o src/mineraldb.o
+	$(CXX) src/app.o src/mainframe.o src/addmodframe.o src/genreportframe.o src/mineraldb.o $(LDFLAGS) -o mineralapp
 src/app.o: src/app.cpp src/mainframe.h src/addmodframe.h
 	$(CXX) -c src/app.cpp -o src/app.o $(CXXFLAGS)
 src/mainframe.o: src/mainframe.cpp src/mainframe.h src/addmodframe.h src/mineraldb.hpp
@@ -52,10 +52,6 @@ src/genreportframe.o: src/genreportframe.cpp src/genreportframe.h src/mineraldb.
 	$(CXX) -c src/genreportframe.cpp -o src/genreportframe.o $(CXXFLAGS)
 src/mineraldb.o: src/mineraldb.cpp src/mineraldb.hpp
 	$(CXX) -c src/mineraldb.cpp -o src/mineraldb.o $(CXXFLAGS)
-src/base64.o: src/base64.cpp src/base64.h
-	$(CXX) -c src/base64.cpp -o src/base64.o $(CXXFLAGS)
-src/image.o: src/image.cpp src/image.h
-	$(CXX) -c src/image.cpp -o src/image.o $(CXXFLAGS)
 
 # Linux specific install instructions
 ifeq ($(UNAME), Linux)

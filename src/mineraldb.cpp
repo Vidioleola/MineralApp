@@ -8,9 +8,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
-#include "base64.h"
 #include "parsecsv.hpp"
-#include "image.h"
 
 
 /* Initialize an empty db */
@@ -565,6 +563,24 @@ std::string db_get_fmt_deaccessioned(std::vector<std::string> data) {
 }
 
 
+/* Get a formatted string for the value/price paid */
+std::string db_get_fmt_value(std::vector<std::string> data, bool hidden) {
+    std::string outstr;
+    std::string value = db_get_field(data, "VALUE");
+    std::string price = db_get_field(data, "PRICE");
+    if (hidden) {
+        outstr = "<hidden>";
+    } else if (value.size()>0) {
+        outstr += value;
+        if (price.size()>0) {
+            outstr += " (price paid: " + price + ")";
+        }
+    } else if (price.size()>0) {
+        outstr = price;
+    }
+    return outstr;
+}
+
 
 /* Insert a new mineral or modify an existing one */
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg) {
@@ -707,26 +723,60 @@ std::vector<std::string> db_get_species_list(sqlite3 *db, std::string *errmsg) {
     return specieslst;
 }
 
+
+/* Format the chemical formula using html sub sup tags */
+static std::string fmt_chemf(std::string chemf) {
+    std::string outstr;
+    strip_unicode(chemf);
+    if (chemf=="") return outstr;
+    bool subscript = true;
+    if (chemf.find(" . ")!=std::string::npos) {
+        chemf = chemf.replace(chemf.find(" . "), 3, "*");
+    }
+    for (size_t n=0; n<chemf.length(); n++) {
+        char tchar = chemf[n];
+        std::string tstr = std::string(1,tchar);
+        char nchar = 0;
+        if (n<chemf.length()-1) {
+            nchar = chemf[n+1];
+        }
+        if (tchar=='+' || tchar=='-' || nchar=='+' || nchar=='-') {
+            outstr += "<sup>" + tstr + "</sup>";
+        } else if ((isdigit(tchar) || tchar=='.') && subscript) {
+            outstr += "<sub>" + tstr + "</sub>";
+        } else if (tchar=='*') {
+            outstr += "\u00b7";
+            //outstr += "<sup>.</sup>";
+            subscript = false;
+        } else {
+            outstr += tstr;
+            if (isalpha(tchar)) {
+                subscript = true;
+            }
+        }
+    }
+    return outstr;
+}
+
+
 /* Generate an html-formatted report for one specimen */
 static std::string db_generate_html_report_minid(std::vector<std::string> data) {
 
     std::string tmp;
     std::string html;
 
-    html += "<h2>" + db_get_field(data, "NAME") + "</h2>\n";
-    html += "<table style=\"table-layout: fixed; width: 100%;\">\n";
-    html += "<colgroup>";
-    html += "<col style=\"width:20%\">";
-    html += "<col style=\"width:20%\">";
-    html += "<col style=\"width:20%\">";
-    html += "<col style=\"width:20%\">";
-    html += "<col style=\"width:20%\">";
+    html += "<h2 style=\"font-size:12pt\">" + db_get_field(data, "NAME") + "</h2>\n";
+    html += "<table style=\"table-layout: fixed; width: 100%; font-size:10pt\">\n";
+    html += "<colgroup>\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "  <col style=\"width:80%\">\n";
     html += "</colgroup>\n";
     html += "<tbody>\n";
-    html += "<tr><td><b>Unique ID:</b></td><td colspan=\"4\">" + db_get_field(data, "ID") + "</td></tr>\n";
+    html += "  <tr><td><b>Number:</b></td><td>" + db_get_field(data, "ID") + "</td></tr>\n";
+    html += "  <tr><td><b>MinID:</b></td><td><a href=\"https://www.mindat.org/" + db_get_field(data, "MINID") + "\">" + db_get_field(data, "MINID") + "</a></td></tr>\n";
     tmp = db_get_field(data, "LOCALITY");
     if (tmp.size()>0) {
-        html += "<tr><td><b>Locality:</b></td><td colspan=\"4\">" + db_get_field(data, "LOCALITY");
+        html += "  <tr><td><b>Locality:</b></td><td>" + tmp;
         tmp = db_get_field(data, "LOCALITY_ID");
         if (tmp.size()>0) {
             html += " <a href=\"https://www.mindat.org/loc-" + tmp + ".html\" target=\"_blank\">";
@@ -734,39 +784,38 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
         }
         html += "</td></tr>\n";
     }
-    tmp = db_get_fmt_size(data);
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Size:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
+    tmp = html_escape(db_get_fmt_size(data));
+    if (tmp.size()>0) html += "  <tr><td><b>Size:</b></td><td>" + tmp + "</td></tr>\n";
     tmp = db_get_fmt_weight(data);
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Weight:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
+    if (tmp.size()>0) html += "  <tr><td><b>Weight:</b></td><td>" + tmp + "</td></tr>\n";
     tmp = db_get_fmt_acquisition(data);
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Acquisition:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
+    if (tmp.size()>0) html += "  <tr><td><b>Acquisition:</b></td><td>" + tmp + "</td></tr>\n";
     tmp = db_get_fmt_deaccessioned(data);
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Deaccessioned:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
+    if (tmp.size()>0) html += "  <tr><td><b>Deaccessioned:</b></td><td>" + tmp + "</td></tr>\n";
     tmp = db_get_field(data, "COLLECTION");
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Collection:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
-    tmp = db_get_field(data, "VALUE");
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Value:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
-    tmp = db_get_field(data, "PRICE");
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Price:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
+    if (tmp.size()>0) html += "  <tr><td><b>Collection:</b></td><td>" + tmp + "</td></tr>\n";
+    tmp = db_get_fmt_value(data, false);
+    if (tmp.size()>0) html += "  <tr><td><b>Estimated value:</b></td><td>" + tmp + "</td></tr>\n";
+    html += "</tbody>\n";
+    html += "</table>\n";
 
     /* Species */
+    html += "<table class=\"species\" style=\"table-layout: fixed; width: 100%; font-size:10pt\">\n";
+    html += "<colgroup>\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "  <col style=\"width:20%\">\n";
+    html += "</colgroup>\n";
+    html += "<tbody>\n";
     tmp = db_get_field(data, "S1_SPECIES") + db_get_field(data, "S2_SPECIES") + db_get_field(data, "S3_SPECIES") + db_get_field(data, "S4_SPECIES");
     if (tmp.size()>0) {
         html += "<tr><td><b>Species:</b></td><td>" + db_get_field(data, "S1_SPECIES") + "</td><td>" + db_get_field(data, "S2_SPECIES") + "</td><td>" + db_get_field(data, "S3_SPECIES") + "</td><td>" + db_get_field(data, "S4_SPECIES") + "</td></tr>\n";
+    }
+    tmp = db_get_field(data, "S1_VARIETY") + db_get_field(data, "S2_VARIETY") + db_get_field(data, "S3_VARIETY") + db_get_field(data, "S4_VARIETY");
+    if (tmp.size()>0) {
+        html += "<tr><td><b>Variety:</b></td><td>" + db_get_field(data, "S1_VARIETY") + "</td><td>" + db_get_field(data, "S2_VARIETY") + "</td><td>" + db_get_field(data, "S3_VARIETY") + "</td><td>" + db_get_field(data, "S4_VARIETY") + "</td></tr>\n";
     }
     tmp = db_get_field(data, "S1_CLASS") + db_get_field(data, "S2_CLASS") + db_get_field(data, "S3_CLASS") + db_get_field(data, "S4_CLASS");
     if (tmp.size()>0) {
@@ -774,7 +823,7 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
     }
     tmp = db_get_field(data, "S1_CHEMF") + db_get_field(data, "S2_CHEMF") + db_get_field(data, "S3_CHEMF") + db_get_field(data, "S4_CHEMF");
     if (tmp.size()>0) {
-        html += "<tr><td><b>Chemical Formula:</b></td><td>" + db_get_field(data, "S1_CHEMF") + "</td><td>" + db_get_field(data, "S2_CHEMF") + "</td><td>" + db_get_field(data, "S3_CHEMF") + "</td><td>" + db_get_field(data, "S4_CHEMF") + "</td></tr>\n";
+        html += "<tr><td><b>Chemical Formula:</b></td><td>" + fmt_chemf(db_get_field(data, "S1_CHEMF")) + "</td><td>" + fmt_chemf(db_get_field(data, "S2_CHEMF")) + "</td><td>" + fmt_chemf(db_get_field(data, "S3_CHEMF")) + "</td><td>" + fmt_chemf(db_get_field(data, "S4_CHEMF")) + "</td></tr>\n";
     }
     tmp = db_get_field(data, "S1_COLOR") + db_get_field(data, "S2_COLOR") + db_get_field(data, "S3_COLOR") + db_get_field(data, "S4_COLOR");
     if (tmp.size()>0) {
@@ -828,18 +877,20 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
     if (tmp.size()>0) {
         html += "<tr><td><b>Radioactive:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
     }
-    tmp = db_get_field(data, "NOTES");
-    if (tmp.size()>0) {
-        html += "<tr><td><b>Notes:</b></td><td colspan=\"4\">" + tmp + "</td></tr>\n";
-    }
     html += "</tbody>\n";
     html += "</table>\n";
 
+    tmp = html_escape(db_get_field(data, "DESCRIPTION"));
+    if (tmp.size()>0) html += "<p style=\"font-size:10pt\"><b>Description:</b><br>" + tmp + "<br></p>\n";
+    tmp = html_escape(db_get_field(data, "NOTES"));
+    if (tmp.size()>0) html += "<p style=\"font-size:10pt\"><b>Notes:</b><br>" + tmp + "<br></p>\n";
+    tmp = html_escape(db_get_field(data, "OWNERS"));
+    if (tmp.size()>0) html += "<p style=\"font-size:10pt\"><b>Previous owners:</b><br>" + tmp + "<br></p>\n";
     return html;
 }
 
 /* Generate html report for the images */
-static std::string db_generate_html_report_minid_images(std::string db_file_path, std::string minid, bool mht) {
+static std::string db_generate_html_report_minid_images(std::string db_file_path, std::string minid) {
     std::vector<fs::path> files = db_get_datafile_list(db_file_path, minid);
     std::vector<std::string> img_formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif" };
     std::vector<fs::path> images;
@@ -851,43 +902,25 @@ static std::string db_generate_html_report_minid_images(std::string db_file_path
     }
     if (images.size()==0) return "";
     std::string html;
-    html += "<table style=\"table-layout: fixed; width: 100%;\">\n";
-    html += "<colgroup>";
-    html += "<col style=\"width:33%\">";
-    html += "<col style=\"width:33%\">";
-    html += "<col style=\"width:33%\">";
-    html += "</colgroup>\n";
-    html += "<tbody>\n";
-    int num=0;
-    html += "<tr>\n";
+    html += "<br>\n";
     for (const auto & path : images) {
-        if (mht) {
-            dz2::Image img(path.string());
-            int w = 150;
-            int h = w*img.height()/img.width();
-            html += "<td><img src=\"mindb.fld/" + minid + "-" + path.filename().string() + "\" width='" + std::to_string(w) + "' height='" + std::to_string(h) + "'></td>\n";
-        } else {
-            html += "<td><img src=\"" + path.string() + "\" width=\"100%\"></td>\n";
-        }
-        num = (num+1)%3;
-        if (num==0) {
-            html += "</tr>\n<tr>\n";
-        }
+        html += "<img src=\"" + path.string() + "\"><br>\n";
     }
-    html += "</tr>\n</tbody>\n</table>\n";
+    html += "<br>\n";
     return html;
 }
 
 
 /* Generate an html-formatted report for the whole database */
-static std::string db_generate_html_report(sqlite3 *db, std::vector<int> minids, std::string db_file_path, bool mht, bool incdata, std::string *errmsg) {
+static std::string db_generate_html_report(sqlite3 *db, std::vector<int> minids, std::string db_file_path, bool incdata, std::string *errmsg) {
     std::vector<std::string> data;
     std::string html;
     html += "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>\n";
     html += "<head><title>Mineral Database -- generated by MineralApp</title>\n";
-    html += "<style><!-- \n";
-    html += "@page WordSection1 {size:8.5in 11.0in;margin:1.0in 1.0in 1.0in 1.0in;mso-header-margin:.5in;mso-footer-margin:.5in;mso-paper-source:0;}";
+    html += "<style>\n";
+    html += "@page WordSection1 {size:5.5in 8.5in;margin:0.5in 0.5in 0.5in 0.5in;mso-header-margin:.5in;mso-footer-margin:.5in;mso-paper-source:0;}";
     html += "div.WordSection1 {page:WordSection1;}\n";
+    html += "table.species, table.species td {\n border: 1px solid black;\n  border-collapse: collapse;\n}";
     html += "</style>\n";
     html += "</head>\n";
     html += "<body>\n";
@@ -896,7 +929,7 @@ static std::string db_generate_html_report(sqlite3 *db, std::vector<int> minids,
         data = db_get_data(db, minid, errmsg);
         if (errmsg->size()>0) return std::string();
         html += db_generate_html_report_minid(data);
-        if (incdata) html += db_generate_html_report_minid_images(db_file_path, std::to_string(minid), mht);
+        if (incdata) html += db_generate_html_report_minid_images(db_file_path, std::to_string(minid));
         html += "<br clear=all style='mso-special-character:line-break;page-break-before:always'>\n";
     }
     html += "</div>\n";
@@ -906,7 +939,7 @@ static std::string db_generate_html_report(sqlite3 *db, std::vector<int> minids,
 }
 
 /* Generate report -- main function */
-void db_generate_report(sqlite3* db, std::string db_file_path, std::string fname, bool fulldb, bool incdata, bool html, int selected_uid, std::string *errmsg) {
+void db_generate_report(sqlite3* db, std::string db_file_path, std::string fname, bool fulldb, bool incdata, int selected_uid, std::string *errmsg) {
 
     /* Prepare list of minids */
     std::vector<int> minids;
@@ -921,52 +954,14 @@ void db_generate_report(sqlite3* db, std::string db_file_path, std::string fname
     }
 
     /* Generate html report */
-    std::string htmlreport = db_generate_html_report(db, minids, db_file_path, !html, incdata, errmsg);
+    std::string htmlreport = db_generate_html_report(db, minids, db_file_path, incdata, errmsg);
     if (errmsg->size()>0) return;
 
-    /* Create html */
-    if (html) {
-        std::ofstream fp(fname);
-        fp << htmlreport;
-        fp.close();
-    }
+    /* Save html */
+    std::ofstream fp(fname);
+    fp << htmlreport;
+    fp.close();
 
-    /* Create mht */
-    else {
-        std::ofstream fp(fname);
-        std::string boundary = "----=_NextPart_ZROIIZO.ZCZYUACXV.ZARTUI";
-        std::string header = "MIME-Version: 1.0\nContent-Type: multipart/related; boundary=\""+boundary+"\"\n\n";
-        fp << header;
-        fp << "--" << boundary << "\n";
-        fp << "Content-Location: file:///C:/mindb.htm\n";
-        fp << "Content-Transfer-Encoding: base64\n";
-        fp << "Content-Type: text/html\n\n";
-        fp << base64_encode_mime(htmlreport);
-        fp << "\n\n";
-        if (incdata) {
-            std::vector<std::string> img_formats = { ".png", ".jpg", ".jpeg" };
-            for (const auto& minid: minids) {
-                std::string uid = std::to_string(minid);
-                std::vector<fs::path> files = db_get_datafile_list(db_file_path, uid);
-                for (const auto & path : files) {
-                    std::string ext = path.extension().string();
-                    if (std::find(img_formats.begin(), img_formats.end(), ext) != img_formats.end()) {
-                        dz2::Image img(path.string());
-                        img.resize(800);
-                        img.set_jpeg_quality(90);
-                        fp << "--" << boundary << "\n";
-                        fp << "Content-Location: file:///C:/mindb.fld/"+uid+"-"+path.filename().string() + "\n";
-                        fp << "Content-Transfer-Encoding: base64\n";
-                        fp << "Content-Type: image/" + ext.substr(1) + "\n\n";
-                        fp << base64_encode_mime(img.write_to_string("jpg"));
-                        fp << "\n\n";
-                    }
-                }
-            }
-        }
-        fp << "--" << boundary << "--\n";
-        fp.close();
-    }
     return;
 }
 
@@ -1119,5 +1114,19 @@ static bool invalid_char(char c) {
 std::string strip_unicode(std::string &str) {
     str.erase(remove_if(str.begin(),str.end(), invalid_char), str.end());
     return str;
+}
+
+/* Escape char for a valid HTML output */
+std::string html_escape(std::string s) {
+    std::ostringstream e;
+    e.fill('0');
+    for (std::string::const_iterator i = s.begin(), n = s.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+        if (c=='<') e << "&lt;";
+        else if (c=='>') e << "&gt;";
+        else if (c=='\n') e << "<br>";
+        else e << c;
+    }
+    return e.str();
 }
 

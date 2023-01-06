@@ -5,3 +5,5 @@ MineralApp.app/
 msw/Release/
 /mineralapp
 /dist
+.vscode/
+build/

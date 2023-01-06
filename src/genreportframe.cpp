@@ -7,6 +7,8 @@
 #include "mineraldb.hpp"
 #include "genreportframe.h"
 
+#include "translation.h"
+
 wxBEGIN_EVENT_TABLE(GenReportFrame, wxFrame)
     EVT_BUTTON(ID_GenReport_Save,   GenReportFrame::OnSave)
     EVT_BUTTON(ID_GenReport_Cancel, GenReportFrame::OnCancel)
@@ -32,13 +34,13 @@ GenReportFrame::GenReportFrame(wxFrame *parent, const wxString& title, sqlite3 *
 	panel->SetAutoLayout(true);
 
     /* Radio buttons */
-    wxStaticText  *lab1 = new wxStaticText(this, -1, "Do you want to generate a report for the full database or only the selected mineral?");
-    rb1a = new wxRadioButton(this, -1, "Full database", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    rb1b = new wxRadioButton(this, -1, "Selected mineral", wxDefaultPosition, wxDefaultSize);
-    wxStaticText  *lab2 = new wxStaticText(this, -1, "Do you want to include the images and data?");
-    rb2a = new wxRadioButton(this, -1, "Yes, please include the images and data", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    rb2b = new wxRadioButton(this, -1, "No, thanks", wxDefaultPosition, wxDefaultSize);
-    wxStaticText  *lab3 = new wxStaticText(this, -1, "The generated HTML report can be opened in any internet browser, or also in Microsoft Word.");
+    wxStaticText  *lab1 = new wxStaticText(panel, -1, __TUTF8("Do you want to generate a report for the full database or only the selected mineral?"));
+    rb1a = new wxRadioButton(panel, -1, __TUTF8("Full database"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    rb1b = new wxRadioButton(panel, -1, __TUTF8("Selected mineral"), wxDefaultPosition, wxDefaultSize);
+    wxStaticText  *lab2 = new wxStaticText(panel, -1, __TUTF8("Do you want to include the images and data?"));
+    rb2a = new wxRadioButton(panel, -1, __TUTF8("Yes, please include the images and data"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    rb2b = new wxRadioButton(panel, -1, __TUTF8("No, thanks"), wxDefaultPosition, wxDefaultSize);
+    wxStaticText  *lab3 = new wxStaticText(panel, -1, __TUTF8("The generated HTML report can be opened in any internet browser, or also in Microsoft Word."));
     rb1b->SetValue(true);
     rb2a->SetValue(true);
     vsizer->Add(lab1, 0, wxEXPAND|wxALL, border);
@@ -51,8 +53,8 @@ GenReportFrame::GenReportFrame(wxFrame *parent, const wxString& title, sqlite3 *
 
     /* ok cancel buttons */
     wxBoxSizer *hsizer_buttons = new wxBoxSizer(wxHORIZONTAL);
-    wxButton *button_save = new wxButton(panel, ID_GenReport_Save, wxString("Save"));
-    wxButton *button_cancel = new wxButton(panel, ID_GenReport_Cancel, wxString("Cancel"));
+    wxButton *button_save = new wxButton(panel, ID_GenReport_Save, __TUTF8("Save"));
+    wxButton *button_cancel = new wxButton(panel, ID_GenReport_Cancel, __TUTF8("Cancel"));
     hsizer_buttons->Add(new wxStaticText(panel, -1, ""), 3, wxALL, border);
     hsizer_buttons->Add(button_cancel, 0, wxALL, border);
     hsizer_buttons->Add(button_save, 0, wxALL, border);
@@ -68,21 +70,20 @@ void GenReportFrame::OnSave(wxCommandEvent& event) {
     bool fulldb = rb1a->GetValue();
     bool include_data = rb2a->GetValue();
     if (selected_uid<0 && !fulldb) {
-        wxLogMessage("Sorry, no mineral was selected. Select one from the left panel.");
+        wxLogMessage(__TUTF8("Sorry, no mineral was selected. Select one from the left panel."));
         Close(true);
     }
     std::string default_fname;
-    std::string default_extension;
     default_fname = "report.html";
-    default_extension = "HTML files (*.html)|*.html";
-    wxFileDialog *save_report = new wxFileDialog(this, "Generate Report", wxEmptyString, default_fname, default_extension, wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+    const auto default_extension = __TUTF8("HTML files (*.html)|*.html");
+    wxFileDialog *save_report = new wxFileDialog(this, __TUTF8("Generate Report"), wxEmptyString, default_fname, default_extension, wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
     if (save_report->ShowModal() == wxID_CANCEL) {
         Close(true);
     }
     std::string errmsg;
     db_generate_report(db, db_path, save_report->GetPath().ToStdString(), fulldb, include_data, selected_uid, &errmsg);
     if (errmsg.size()>0) {
-        wxLogMessage(wxString("Writing failed!\n" + errmsg));
+        wxLogMessage(__TUTF8("Writing failed!\n" + errmsg));
     }
     Close(true);
 }

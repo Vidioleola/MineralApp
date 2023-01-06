@@ -1,5 +1,6 @@
 
 #include "mineraldb.hpp"
+#include "translation.h"
 
 class MainFrame: public wxFrame {
     public:
@@ -10,6 +11,7 @@ class MainFrame: public wxFrame {
         wxMenu *menuFile;
         wxMenu *menuMineral;
         wxMenu *menuHelp;
+        wxMenu *menuLang;
         wxMenuBar *menuBar;
         wxListBox *mineral_listbox;
         wxTextCtrl *mineral_search;
@@ -23,6 +25,8 @@ class MainFrame: public wxFrame {
         void OnDeleteMineral(wxCommandEvent& event);
         void OnSelectMineral(wxCommandEvent& event);
         void OnGenReport(wxCommandEvent& event);
+        void OnSelectEN(wxCommandEvent& event);
+        void OnSelectFR(wxCommandEvent& event);
         void OnOpen(wxCommandEvent& event);
         void OnSave(wxCommandEvent& event);
         void OnClose(wxCommandEvent& event);
@@ -42,6 +46,7 @@ class MainFrame: public wxFrame {
         std::string db_file_path;
         fs::path get_config_dirname();
         void read_config();
+        Translator::LANG_t read_lang_from_config();
         void write_config();
         void populate_listbox();
         void populate_country_filter();
@@ -63,5 +68,7 @@ enum {
     ID_ImportCSV,
     ID_HIDEVALUE,
     ID_GenReport,
+    ID_LangEN,
+    ID_LangFR,
 };
 

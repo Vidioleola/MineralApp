@@ -10,6 +10,8 @@
 #include <algorithm>
 #include "parsecsv.hpp"
 
+#include "translation.h"
+
 
 /* Initialize an empty db */
 void db_initialize(sqlite3 **db, std::string *errmsg) {
@@ -315,6 +317,9 @@ std::string db_get_field(std::vector<std::string> data, std::string field, bool 
     }
     else return "ERROR!";
 }
+wxString db_get_field_utf8(std::vector<std::string> data, std::string field, bool remove_no) {
+   return wxString::FromUTF8(db_get_field(data, field, remove_no).c_str()); 
+}
 
 /* Get all data relative to a minid from the db */
 std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg, int header_version) {
@@ -487,8 +492,8 @@ std::string db_get_fmt_size(std::vector<std::string> data) {
 
 /* Get a formatted string for the weight of a specimen */
 std::string db_get_fmt_weight(std::vector<std::string> data) {
-    std::string w = db_get_field(data, "WEIGHT");
-    std::string u = db_get_field(data, "WEIGHT_UNITS");
+    std::string w = db_get_field_utf8(data, "WEIGHT").ToStdString();
+    std::string u = db_get_field_utf8(data, "WEIGHT_UNITS").ToStdString();
     std::string weight = w;
     if (weight.size()>0) weight += " ";
     weight += u;
@@ -497,20 +502,20 @@ std::string db_get_fmt_weight(std::vector<std::string> data) {
 
 /* Get a formatted string for the acquisition date & source */
 std::string db_get_fmt_acquisition(std::vector<std::string> data) {
-    std::string y = db_get_field(data, "ACQUISITION_YEAR");
-    std::string m = db_get_field(data, "ACQUISITION_MONTH");
-    std::string d = db_get_field(data, "ACQUISITION_DAY");
-    std::string s = db_get_field(data, "ACQUISITION_SOURCE");
-    std::string self = db_get_field(data, "SELFCOLLECTED");
+    std::string y = db_get_field_utf8(data, "ACQUISITION_YEAR").ToStdString();
+    std::string m = db_get_field_utf8(data, "ACQUISITION_MONTH").ToStdString();
+    std::string d = db_get_field_utf8(data, "ACQUISITION_DAY").ToStdString();
+    std::string s = db_get_field_utf8(data, "ACQUISITION_SOURCE").ToStdString();
+    std::string self = db_get_field_utf8(data, "SELFCOLLECTED").ToStdString();
     std::string a;
-    std::vector<std::string> months = {"January", "February", "March", "April",
-        "May", "June", "July", "August", "September", "October", "November", "December"};
+    std::vector<std::string> months = {__TUTF8("January").ToStdString(), __TUTF8("February").ToStdString(), __TUTF8("March").ToStdString(), __TUTF8("April").ToStdString(),
+        __TUTF8("May").ToStdString(), __TUTF8("June").ToStdString(), __TUTF8("July").ToStdString(), __TUTF8("August").ToStdString(), __TUTF8("September").ToStdString(), __TUTF8("October").ToStdString(), __TUTF8("November").ToStdString(), __TUTF8("December").ToStdString()};
     if (d.size()>0) a += d + " ";
     if (m.size()>0) {
         int mm, ret;
         ret = sscanf(m.c_str(), "%d", &mm);
-        if (ret==1 and to_string(mm)==m) {
-            if (mm>=0 and mm<12) {
+        if (ret==1 && to_string(mm)==m) {
+            if (mm>=0 && mm<12) {
                 a += months[mm] + " ";
             } else {
                 a += m + " ";
@@ -526,7 +531,7 @@ std::string db_get_fmt_acquisition(std::vector<std::string> data) {
     }
     if (self=="1") {
         if (a.size()>0) a += " ";
-        a += "self-collected";
+        a += __TUTF8("self-collected").ToStdString();
     }
     return a;
 }
@@ -538,14 +543,14 @@ std::string db_get_fmt_deaccessioned(std::vector<std::string> data) {
     std::string d = db_get_field(data, "DEACCESSIONED_DAY");
     std::string s = db_get_field(data, "DEACCESSIONED_TO");
     std::string a;
-    std::vector<std::string> months = {"January", "February", "March", "April",
-        "May", "June", "July", "August", "September", "October", "November", "December"};
+    std::vector<std::string> months = {__TUTF8("January").ToStdString(), __TUTF8("February").ToStdString(), __TUTF8("March").ToStdString(), __TUTF8("April").ToStdString(),
+        __TUTF8("May").ToStdString(), __TUTF8("June").ToStdString(), __TUTF8("July").ToStdString(), __TUTF8("August").ToStdString(), __TUTF8("September").ToStdString(), __TUTF8("October").ToStdString(), __TUTF8("November").ToStdString(), __TUTF8("December").ToStdString()};
     if (d.size()>0) a += d + " ";
     if (m.size()>0) {
         int mm, ret;
         ret = sscanf(m.c_str(), "%d", &mm);
-        if (ret==1 and to_string(mm)==m) {
-            if (mm>=0 and mm<12) {
+        if (ret==1 && to_string(mm)==m) {
+            if (mm>=0 && mm<12) {
                 a += months[mm] + " ";
             } else {
                 a += m + " ";
@@ -566,14 +571,14 @@ std::string db_get_fmt_deaccessioned(std::vector<std::string> data) {
 /* Get a formatted string for the value/price paid */
 std::string db_get_fmt_value(std::vector<std::string> data, bool hidden) {
     std::string outstr;
-    std::string value = db_get_field(data, "VALUE");
-    std::string price = db_get_field(data, "PRICE");
+    std::string value = db_get_field_utf8(data, "VALUE").ToStdString();
+    std::string price = db_get_field_utf8(data, "PRICE").ToStdString();
     if (hidden) {
-        outstr = "<hidden>";
+        outstr = __TUTF8("<hidden>").ToStdString();
     } else if (value.size()>0) {
         outstr += value;
         if (price.size()>0) {
-            outstr += " (price paid: " + price + ")";
+            outstr += " (" + __TUTF8("price paid").ToStdString() + ": " + price + ")";
         }
     } else if (price.size()>0) {
         outstr = price;
@@ -892,7 +897,7 @@ static std::string db_generate_html_report_minid(std::vector<std::string> data) 
 /* Generate html report for the images */
 static std::string db_generate_html_report_minid_images(std::string db_file_path, std::string minid) {
     std::vector<fs::path> files = db_get_datafile_list(db_file_path, minid);
-    std::vector<std::string> img_formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif" };
+    std::vector<std::string> img_formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif", ".JPG", ".PNG" };
     std::vector<fs::path> images;
     for (const auto & path : files) {
         std::string ext = path.extension().string();

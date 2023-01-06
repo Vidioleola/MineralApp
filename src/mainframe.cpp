@@ -15,6 +15,7 @@
 #include "mainframe.h"
 #include "addmodframe.h"
 #include "genreportframe.h"
+#include "translation.h"
 
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_ExportCSV,        MainFrame::export_csv)
@@ -24,6 +25,8 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_MENU(ID_DuplicateMineral, MainFrame::OnDuplicateMineral)
     EVT_MENU(ID_DeleteMineral,    MainFrame::OnDeleteMineral)
     EVT_MENU(ID_GenReport,        MainFrame::OnGenReport)
+    EVT_MENU(ID_LangEN,        MainFrame::OnSelectEN)
+    EVT_MENU(ID_LangFR,        MainFrame::OnSelectFR)
     EVT_MENU(wxID_OPEN,  MainFrame::OnOpen)
     EVT_MENU(wxID_SAVE,  MainFrame::OnSave)
     EVT_MENU(wxID_CLOSE, MainFrame::OnClose)
@@ -40,6 +43,9 @@ wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
         : wxFrame(NULL, wxID_ANY, title, pos, size) {
+
+    INIT_TRANSLATOR(read_lang_from_config());
+
     /* Initialize DB */
     db = NULL;
     db_file_path = "";
@@ -49,48 +55,52 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
     wxImage::AddHandler(new wxTIFFHandler);
     /* Menu Bar */
     menuFile = new wxMenu;
-    menuFile->Append(wxID_OPEN);
-    menuFile->Append(wxID_SAVE);
-    menuFile->Append(wxID_CLOSE);
-    menuFile->Append(ID_ImportCSV, "&Import CSV", "Import mineral database from a CSV file");
-    menuFile->Append(ID_ExportCSV, "&Export CSV", "Export mineral database as CSV file");
+    menuFile->Append(wxID_OPEN, __TUTF8("Open"));
+    menuFile->Append(wxID_SAVE, __TUTF8("Save"));
+    menuFile->Append(wxID_CLOSE, __TUTF8("Close"));
+    menuFile->Append(ID_ImportCSV, __TUTF8("Import CSV"), __TUTF8("Import mineral database from a CSV file"));
+    menuFile->Append(ID_ExportCSV, __TUTF8("Export CSV"), __TUTF8("Export mineral database as CSV file"));
     menuFile->AppendSeparator();
-    menuFile->Append(wxID_EXIT);
+    menuFile->Append(wxID_EXIT, __TUTF8("Exit"));
     menuMineral = new wxMenu;
-    menuMineral->Append(ID_NewMineral, "&Add", "Add a new mineral to the database");
-    menuMineral->Append(ID_ModifyMineral, "&Modify", "Modify the selected mineral");
-    menuMineral->Append(ID_DuplicateMineral, "&Duplicate", "Duplicate the selected mineral");
-    menuMineral->Append(ID_DeleteMineral, "&Delete", "Delete the selected mineral");
+    menuMineral->Append(ID_NewMineral, __TUTF8("Add"), __TUTF8("Add a new mineral to the database"));
+    menuMineral->Append(ID_ModifyMineral, __TUTF8("Modify"), __TUTF8("Modify the selected mineral"));
+    menuMineral->Append(ID_DuplicateMineral, __TUTF8("Duplicate"), __TUTF8("Duplicate the selected mineral"));
+    menuMineral->Append(ID_DeleteMineral, __TUTF8("Delete"), __TUTF8("Delete the selected mineral"));
     menuMineral->AppendSeparator();
-    menuMineral->AppendCheckItem(ID_HIDEVALUE, "&Hide mineral value");
-    menuMineral->Append(ID_GenReport, "&Generate printable report");
+    menuMineral->AppendCheckItem(ID_HIDEVALUE, __TUTF8("Hide mineral value"));
+    menuMineral->Append(ID_GenReport, __TUTF8("Generate printable report"));
+    menuLang = new wxMenu;
+    menuLang->Append(ID_LangEN, __TUTF8("English"), __TUTF8("Select English"));
+    menuLang->Append(ID_LangFR, __TUTF8("French"), __TUTF8("Select French"));
     menuHelp = new wxMenu;
     menuHelp->Append(wxID_ABOUT);
-    menuHelp->Append(wxID_HELP, "&Read the manual online", "Open the MineralApp manual on the browser");
+    menuHelp->Append(wxID_HELP, __TUTF8("Read the manual online"), __TUTF8("Open the MineralApp manual on the browser"));
     menuBar = new wxMenuBar;
-    menuBar->Append(menuFile, "&File" );
-    menuBar->Append(menuMineral, "&Mineral" );
-    menuBar->Append(menuHelp, "&Help" );
+    menuBar->Append(menuFile, __TUTF8("File" ));
+    menuBar->Append(menuMineral, __TUTF8("Mineral" ));
+    menuBar->Append(menuLang, __TUTF8("Language"));
+    menuBar->Append(menuHelp, __TUTF8("Help" ));
     SetMenuBar( menuBar );
     /* Status Bar */
     CreateStatusBar();
-    SetStatusText("Welcome to MineralApp!" );
+    SetStatusText(__TUTF8("Welcome to MineralApp!" ));
     /* ListBox */
     mineral_listbox = new wxListBox(this, ID_SelectMineral);
     /* Search entry */
-    wxStaticText *mineral_search_label = new wxStaticText(this, -1, "Filter:");
+    wxStaticText *mineral_search_label = new wxStaticText(this, -1, __TUTF8("Filter:"));
     mineral_search = new wxTextCtrl(this, ID_SearchMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
     /* Order by */
-    wxStaticText *mineral_orderby_label = new wxStaticText(this, -1, "Order by:");
+    wxStaticText *mineral_orderby_label = new wxStaticText(this, -1, __TUTF8("Order by:"));
     wxArrayString orderby_choices;
-    orderby_choices.Add("Unique ID");
-    orderby_choices.Add("Name");
+    orderby_choices.Add(__TUTF8("Unique ID"));
+    orderby_choices.Add(__TUTF8("Name"));
     mineral_orderby = new wxRadioBox(this, ID_OrderByMineral, wxEmptyString, wxDefaultPosition, wxDefaultSize, orderby_choices, 2, wxRA_HORIZONTAL);
     /* Country filter */
-    wxStaticText *mineral_country_label = new wxStaticText(this, -1, "Country:");
+    wxStaticText *mineral_country_label = new wxStaticText(this, -1, __TUTF8("Country:"));
     mineral_country = new wxChoice(this, ID_FilterCountry, wxDefaultPosition, wxDefaultSize, 0, NULL);
     /* Species filter */
-    wxStaticText *mineral_species_label = new wxStaticText(this, -1, "Species:");
+    wxStaticText *mineral_species_label = new wxStaticText(this, -1, __TUTF8("Species:"));
     mineral_species = new wxChoice(this, ID_FilterSpecies, wxDefaultPosition, wxDefaultSize, 0, NULL);
     /* Grid sizer */
     wxFlexGridSizer *leftgrid = new wxFlexGridSizer(2,0,0);
@@ -120,13 +130,14 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 void MainFrame::OnOpen(wxCommandEvent& event) {
     /* Check if some db is already opened and warn the user */
     if (db) {
-        wxMessageDialog *dial = new wxMessageDialog(NULL, "You have already an open database. Do you want to discard it and open a new one?", "Question", wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
-        if (dial->ShowModal()!=wxID_YES) {
+        wxMessageDialog dial = wxMessageDialog(NULL, __TUTF8("You have already an open database. Do you want to discard it and open a new one?"), __TUTF8("Question"), wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
+        dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
+        if (dial.ShowModal()!=wxID_YES) {
             return;
         }
     }
     /* Get the filename of the db to read */
-    wxFileDialog openFileDialog(this, "Open database", wxEmptyString, "minerals.sqlite3",  "Database files (*.sqlite3)|*.sqlite3", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+    wxFileDialog openFileDialog(this, __TUTF8("Open database"), wxEmptyString, "minerals.sqlite3",  __TUTF8("Database files (*.sqlite3)|*.sqlite3"), wxFD_OPEN|wxFD_FILE_MUST_EXIST);
     if (openFileDialog.ShowModal()==wxID_CANCEL) {
         return;
     }
@@ -145,10 +156,10 @@ void MainFrame::OnOpen(wxCommandEvent& event) {
 
 void MainFrame::OnSave(wxCommandEvent& event) {
     if (!db) {
-        wxLogMessage("Nothing to save!");
+        wxLogMessage(__TUTF8("Nothing to save!"));
         return;
     }
-    wxFileDialog saveFileDialog(this, "Save database", wxEmptyString, "minerals.sqlite3",  "Database files (*.sqlite3)|*.sqlite3", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+    wxFileDialog saveFileDialog(this, __TUTF8("Save database"), wxEmptyString, "minerals.sqlite3",  __TUTF8("Database files (*.sqlite3)|*.sqlite3"), wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
     if (saveFileDialog.ShowModal() == wxID_CANCEL) {
         return;
     }
@@ -163,8 +174,9 @@ void MainFrame::OnSave(wxCommandEvent& event) {
 }
 
 void MainFrame::OnClose(wxCommandEvent& event) {
-    std::string msg = "You are going to close the current database. If you did not save it any edits will be lost. This operation cannot be undone.";
-    wxMessageDialog dial(this, msg, "Are you sure you want to close the current database??", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
+   const auto msg = __TUTF8("You are going to close the current database. If you did not save it any edits will be lost. This operation cannot be undone.");
+    wxMessageDialog dial(this, msg, __TUTF8("Are you sure you want to close the current database?"), wxYES_NO | wxNO_DEFAULT);
+    dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
     if (dial.ShowModal() != wxID_YES) return;
     std::string errmsg;
     db_close(db, &errmsg);
@@ -210,11 +222,11 @@ void MainFrame::OnNewMineral(wxCommandEvent& event) {
     if (!db) {
         db_initialize(&db, &errmsg);
     }
-    if (!db or errmsg.size()>0) {
-        wxMessageBox("DB initialization failed! Sorry, try to close everything and retry...");
+    if (!db || errmsg.size()>0) {
+        wxMessageBox(__TUTF8("DB initialization failed! Sorry, try to close everything and retry..."));
         return;
     }
-    AddModFrame *frame = new AddModFrame(this, "Add new mineral", db, -1);
+    AddModFrame *frame = new AddModFrame(this, __TUTF8("Add new mineral"), db, -1);
     frame->Show();
 }
 
@@ -222,7 +234,7 @@ int MainFrame::get_minid_from_listbox(bool warn) {
     int minid;
     int selected = mineral_listbox->GetSelection();
     if (selected==wxNOT_FOUND) {
-        if (warn) wxLogMessage("Please, select a mineral from the left panel.");
+        if (warn) wxLogMessage(__TUTF8("Please, select a mineral from the left panel."));
         return -1;
     }
     wxString label = mineral_listbox->GetString(selected);
@@ -230,7 +242,7 @@ int MainFrame::get_minid_from_listbox(bool warn) {
     int ndxf = label.rfind(']');
     int ret = sscanf(label.substr(ndxi,ndxf).c_str(), "[%d]", &minid);
     if (ret!=1) {
-        if (warn) wxLogMessage("Please, select a mineral from the left panel.");
+        if (warn) wxLogMessage(__TUTF8("Please, select a mineral from the left panel."));
         return -1;
     }
     return minid;
@@ -239,7 +251,7 @@ int MainFrame::get_minid_from_listbox(bool warn) {
 void MainFrame::OnModifyMineral(wxCommandEvent& event) {
     int minid = get_minid_from_listbox();
     if (minid<0) return;
-    AddModFrame *frame = new AddModFrame(this, "Add new mineral", db, minid);
+    AddModFrame *frame = new AddModFrame(this, __TUTF8("Add new mineral"), db, minid);
     frame->Show();
 }
 
@@ -250,10 +262,10 @@ void MainFrame::OnDuplicateMineral(wxCommandEvent& event) {
     std::string errmsg;
     db_duplicate_mineral(db, minid, &errmsg);
     if (errmsg.size()>0) {
-        wxLogMessage(wxString("Duplicate failed: ") + errmsg);
+        wxLogMessage(__TUTF8("Duplicate failed: ") + errmsg);
     } else {
         update_gui();
-        wxLogMessage("Mineral duplicated!");
+        wxLogMessage(__TUTF8("Mineral duplicated!"));
     }
     return;
 }
@@ -261,8 +273,9 @@ void MainFrame::OnDuplicateMineral(wxCommandEvent& event) {
 void MainFrame::OnDeleteMineral(wxCommandEvent& event) {
     int minid = get_minid_from_listbox();
     if (minid<0) return;
-    std::string msg = "You are going to delete mineral ID " + std::to_string(minid) +  ". This operation cannot be undone.";
-    wxMessageDialog dial(this, msg, "Are you sure you want to delete this mineral?", wxYES_NO | wxCANCEL | wxNO_DEFAULT);
+   const auto msg = __TUTF8("You are going to delete mineral ID ") + std::to_string(minid) +  __TUTF8(". This operation cannot be undone.");
+    wxMessageDialog dial(this, msg, __TUTF8("Are you sure you want to delete this mineral?"), wxYES_NO | wxNO_DEFAULT);
+    dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
     if (dial.ShowModal() != wxID_YES) return;
     std::string errmsg;
     db_delete_mineral(db, minid, &errmsg);
@@ -307,20 +320,20 @@ void MainFrame::draw_mineral_view(int minid) {
 
     /* Title */
     r->BeginFontSize(16);
-    r->WriteText(db_get_field(data, "NAME"));
+    r->WriteText(db_get_field_utf8(data, "NAME"));
     r->EndFontSize();
     r->Newline();
     r->Newline();
     
     /* ID */
     r->BeginBold();
-    r->WriteText("Catalog Number   : ");
+    r->WriteText(__TUTF8("Catalog Number   : "));
     r->EndBold();
-    r->WriteText(db_get_field(data, "ID"));
+    r->WriteText(db_get_field_utf8(data, "ID"));
     r->Newline();
 
     /* minID */
-    wxString mindat_id = db_get_field(data, "MINID");
+    wxString mindat_id = db_get_field_utf8(data, "MINID");
     r->BeginBold();
     r->WriteText("minID            : ");
     r->EndBold();
@@ -329,7 +342,7 @@ void MainFrame::draw_mineral_view(int minid) {
         r->WriteText(" (");
         r->BeginStyle(urlStyle);
         r->BeginURL(wxString("https://www.mindat.org/")+mindat_id);
-        r->WriteText("See on MINDAT");
+        r->WriteText(__TUTF8("See on MINDAT"));
         r->EndURL();
         r->EndStyle();
         r->WriteText(")");
@@ -337,17 +350,17 @@ void MainFrame::draw_mineral_view(int minid) {
     r->Newline();
 
     /* Locality */
-    wxString locality = db_get_field(data, "LOCALITY");
-    wxString locid = db_get_field(data, "LOCALITY_ID");
+    wxString locality = db_get_field_utf8(data, "LOCALITY");
+    wxString locid = db_get_field_utf8(data, "LOCALITY_ID");
     r->BeginBold();
-    r->WriteText("Locality         : ");
+    r->WriteText(__TUTF8("Locality         : "));
     r->EndBold();
     if (!locality.empty()) r->WriteText(locality);
     if (!locid.empty()) {
         r->WriteText(" (");
         r->BeginStyle(urlStyle);
         r->BeginURL(wxString("https://www.mindat.org/loc-")+locid+".html");
-        r->WriteText("See on MINDAT");
+        r->WriteText(__TUTF8("See on MINDAT"));
         r->EndURL();
         r->EndStyle();
         r->WriteText(")");
@@ -355,67 +368,67 @@ void MainFrame::draw_mineral_view(int minid) {
     r->Newline();
     
     /* Size, weight, acquisition, collection value */
-    wxString size = db_get_fmt_size(data);
-    wxString weight = db_get_fmt_weight(data);
-    wxString acquisition = db_get_fmt_acquisition(data);
-    wxString deaccessioned = db_get_fmt_deaccessioned(data);
-    wxString collection = db_get_field(data, "COLLECTION");
-    wxString value = db_get_fmt_value(data, menuMineral->IsChecked(ID_HIDEVALUE));
-    r->BeginBold(); r->WriteText("Size             : "); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
-    r->BeginBold(); r->WriteText("Weight           : "); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
-    r->BeginBold(); r->WriteText("Acquisition      : "); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
-    r->BeginBold(); r->WriteText("Collection       : "); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
-    r->BeginBold(); r->WriteText("Estimated Value  : "); r->EndBold(); if (value.length()>0) r->WriteText(value); r->Newline();
+    wxString size = wxString::FromUTF8(db_get_fmt_size(data));
+    wxString weight =  wxString::FromUTF8(db_get_fmt_weight(data));
+    wxString acquisition =  wxString::FromUTF8(db_get_fmt_acquisition(data));
+    wxString deaccessioned =  wxString::FromUTF8(db_get_fmt_deaccessioned(data));
+    wxString collection =  wxString::FromUTF8(db_get_field_utf8(data, "COLLECTION"));
+    wxString value =  wxString::FromUTF8(db_get_fmt_value(data, menuMineral->IsChecked(ID_HIDEVALUE)));
+    r->BeginBold(); r->WriteText(__TUTF8("Size             : ")); r->EndBold(); if (size.length()>0) r->WriteText(size); r->Newline();
+    r->BeginBold(); r->WriteText(__TUTF8("Weight           : ")); r->EndBold(); if (weight.length()>0) r->WriteText(weight); r->Newline();
+    r->BeginBold(); r->WriteText(__TUTF8("Acquisition      : ")); r->EndBold(); if (acquisition.length()>0) r->WriteText(acquisition); r->Newline();
+    r->BeginBold(); r->WriteText(__TUTF8("Collection       : ")); r->EndBold(); if (collection.length()>0) r->WriteText(collection); r->Newline();
+    r->BeginBold(); r->WriteText(__TUTF8("Estimated Value  : ")); r->EndBold(); if (value.length()>0) r->WriteText(value); r->Newline();
     if (deaccessioned.size()>0) {
-        r->BeginBold(); r->WriteText("Deaccessioned    : "); r->EndBold(); r->WriteText(deaccessioned); r->Newline();
+        r->BeginBold(); r->WriteText(__TUTF8("Deaccessioned    : ")); r->EndBold(); r->WriteText(deaccessioned); r->Newline();
     }
     r->Newline();
 
     /* Table of species */
-    write_table_row("Species          ", data, "SPECIES");
-    write_table_row("Variety          ", data, "VARIETY");
-    write_table_row("Class            ", data, "CLASS");
-    write_table_row_chemf("Chem. Formula    ", data);
-    write_table_row("Color            ", data, "COLOR");
-    write_table_row("Transparency     ", data, "TRANSP");
-    write_table_row("Habit            ", data, "HABIT");
-    write_table_row("Fluorescence SW  ", data, "FLSW");
-    write_table_row("Fluorescence MW  ", data, "FLMW");
-    write_table_row("Fluorescence LW  ", data, "FLLW");
-    write_table_row("Fluor. 405nm     ", data, "FL405");
-    write_table_row("Phosphor. SW     ", data, "PHSW");
-    write_table_row("Phosphor. MW     ", data, "PHMW");
-    write_table_row("Phosphor. LW     ", data, "PHLW");
-    write_table_row("Phosphor. 405nm  ", data, "PH405");
-    write_table_row("Tenebrescence    ", data, "TENEBR");
-    write_table_row("Triboluminescence", data, "TRIBO");
+    write_table_row(__TUTF8("Species          "), data, "SPECIES");
+    write_table_row(__TUTF8("Variety          "), data, "VARIETY");
+    write_table_row(__TUTF8("Class            "), data, "CLASS");
+    write_table_row_chemf(__TUTF8("Chem. Formula    "), data);
+    write_table_row(__TUTF8("Color            "), data, "COLOR");
+    write_table_row(__TUTF8("Transparency     "), data, "TRANSP");
+    write_table_row(__TUTF8("Habit            "), data, "HABIT");
+    write_table_row(__TUTF8("Fluorescence SW  "), data, "FLSW");
+    write_table_row(__TUTF8("Fluorescence MW  "), data, "FLMW");
+    write_table_row(__TUTF8("Fluorescence LW  "), data, "FLLW");
+    write_table_row(__TUTF8("Fluor. 405nm     "), data, "FL405");
+    write_table_row(__TUTF8("Phosphor. SW     "), data, "PHSW");
+    write_table_row(__TUTF8("Phosphor. MW     "), data, "PHMW");
+    write_table_row(__TUTF8("Phosphor. LW     "), data, "PHLW");
+    write_table_row(__TUTF8("Phosphor. 405nm  "), data, "PH405");
+    write_table_row(__TUTF8("Tenebrescence    "), data, "TENEBR");
+    write_table_row(__TUTF8("Triboluminescence"), data, "TRIBO");
     write_link_row(data);
     r->Newline();
 
     /* Radioactivity */
-    wxString radioact = db_get_field(data, "RADIOACTIVITY");
+    wxString radioact = db_get_field_utf8(data, "RADIOACTIVITY");
     if (!radioact.empty()) {
-        r->BeginBold(); r->WriteText("Radioactivity    : "); r->EndBold();
+        r->BeginBold(); r->WriteText(__TUTF8("Radioactivity    : ")); r->EndBold();
         r->WriteText(radioact); r->Newline();
         r->Newline();
     }
 
     /* Comments */
-    wxString description = db_get_field(data, "DESCRIPTION");
+    wxString description = db_get_field_utf8(data, "DESCRIPTION");
     if (!description.empty()) {
-        r->BeginBold(); r->WriteText("Description: "); r->EndBold(); r->Newline();
+        r->BeginBold(); r->WriteText(__TUTF8("Description: ")); r->EndBold(); r->Newline();
         r->WriteText(description); r->Newline();
         r->Newline();
     }
-    wxString notes = db_get_field(data, "NOTES");
+    wxString notes = db_get_field_utf8(data, "NOTES");
     if (!notes.empty()) {
-        r->BeginBold(); r->WriteText("Notes: "); r->EndBold(); r->Newline();
+        r->BeginBold(); r->WriteText(__TUTF8("Notes: ")); r->EndBold(); r->Newline();
         r->WriteText(notes); r->Newline();
         r->Newline();
     }
-    wxString owners = db_get_field(data, "OWNERS");
+    wxString owners = db_get_field_utf8(data, "OWNERS");
     if (!owners.empty()) {
-        r->BeginBold(); r->WriteText("Previous owners: "); r->EndBold(); r->Newline();
+        r->BeginBold(); r->WriteText(__TUTF8("Previous owners: ")); r->EndBold(); r->Newline();
         r->WriteText(owners); r->Newline();
         r->Newline();
     }
@@ -566,18 +579,18 @@ void MainFrame::write_link_row(std::vector<std::string> data) {
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
     wxRichTextCtrl *r = mineral_view;
-    wxString s1 = db_get_field(data, "S1_VARIETY");
-    wxString s2 = db_get_field(data, "S2_VARIETY");
-    wxString s3 = db_get_field(data, "S3_VARIETY");
-    wxString s4 = db_get_field(data, "S4_VARIETY");
+    wxString s1 = db_get_field_utf8(data, "S1_VARIETY");
+    wxString s2 = db_get_field_utf8(data, "S2_VARIETY");
+    wxString s3 = db_get_field_utf8(data, "S3_VARIETY");
+    wxString s4 = db_get_field_utf8(data, "S4_VARIETY");
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
     if (s4=="No" || s4=="no") s4=wxString("");
-    if (s1.empty()) s1 = db_get_field(data, "S1_SPECIES");
-    if (s2.empty()) s2 = db_get_field(data, "S2_SPECIES");
-    if (s3.empty()) s3 = db_get_field(data, "S3_SPECIES");
-    if (s4.empty()) s4 = db_get_field(data, "S4_SPECIES");
+    if (s1.empty()) s1 = db_get_field_utf8(data, "S1_SPECIES");
+    if (s2.empty()) s2 = db_get_field_utf8(data, "S2_SPECIES");
+    if (s3.empty()) s3 = db_get_field_utf8(data, "S3_SPECIES");
+    if (s4.empty()) s4 = db_get_field_utf8(data, "S4_SPECIES");
     if (s1=="No" || s1=="no") s1=wxString("");
     if (s2=="No" || s2=="no") s2=wxString("");
     if (s3=="No" || s3=="no") s3=wxString("");
@@ -629,12 +642,12 @@ void MainFrame::ReadData(std::string uid) {
     urlStyle.SetTextColour(*wxBLUE);
     urlStyle.SetFontUnderlined(true);
 
-    std::vector<std::string> formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif" };
+    std::vector<std::string> formats = { ".png", ".jpg", ".jpeg", ".gif", ".tiff", ".tif", ".JPG", ".PNG" };
     wxRichTextCtrl *r = mineral_view;
     int width, height;
     float scale;
 
-    r->BeginBold(); r->WriteText("Figures & Data :"); r->EndBold();
+    r->BeginBold(); r->WriteText(__TUTF8("Figures & Data :")); r->EndBold();
     r->Newline();
     r->Newline();
 
@@ -652,9 +665,9 @@ void MainFrame::ReadData(std::string uid) {
             r->WriteImage(image);
             r->WriteText("    ");
         } else if (fs::is_directory(path)) {
-            r->WriteText(wxString("directory: "));
+            r->WriteText(__TUTF8("directory: "));
         } else {
-            r->WriteText(wxString("file: "));
+            r->WriteText(__TUTF8("file: "));
         }
         r->BeginStyle(urlStyle);r->BeginURL(wxString("file://")+url_encode(path));r->WriteText(wxString(path.filename()));r->EndURL();r->EndStyle();
         r->WriteText(" ");
@@ -678,12 +691,12 @@ void MainFrame::populate_listbox() {
 
     int country_id = mineral_country->GetSelection();
     std::string country;
-    if (country_id!=wxNOT_FOUND) country = mineral_country->GetString(country_id);
+    if (country_id!=wxNOT_FOUND) country = mineral_country->GetString(country_id).utf8_string();
     if (country=="Any") country="";
 
     int species_id = mineral_species->GetSelection();
     std::string species;
-    if (species_id!=wxNOT_FOUND) species = mineral_species->GetString(species_id);
+    if (species_id!=wxNOT_FOUND) species = mineral_species->GetString(species_id).utf8_string();
     if (species=="Any") species="";
 
     std::string errmsg;
@@ -692,7 +705,7 @@ void MainFrame::populate_listbox() {
         wxLogMessage("error: %s", errmsg);
         return;
     }
-    for (auto res : results) mineral_listbox->Append(res);
+    for (auto res : results) mineral_listbox->Append(wxString::FromUTF8(res));
 
     return;
 }
@@ -703,7 +716,7 @@ void MainFrame::populate_country_filter() {
     std::string errmsg = "";
     std::vector<std::string> countries = db_get_country_list(db, &errmsg);
     for(const auto& value: countries) {
-        mineral_country->Append(value);
+        mineral_country->Append(wxString::FromUTF8(value));
     }
     return;
 }
@@ -714,7 +727,7 @@ void MainFrame::populate_species_filter() {
     std::string errmsg = "";
     std::vector<std::string> species = db_get_species_list(db, &errmsg);
     for(const auto& value: species) {
-        mineral_species->Append(value);
+        mineral_species->Append(wxString::FromUTF8(value));
     }
     return;
 }
@@ -731,8 +744,9 @@ void MainFrame::import_csv(wxCommandEvent& event) {
     std::string errmsg;
     /* Check if some db is already opened and warn the user */
     if (db) {
-        wxMessageDialog *dial = new wxMessageDialog(NULL, "You have already an open database. By importing from a CSV file any duplicate mineral id will overwtie existing ones. Do you want to continue?", "Question", wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
-        if (dial->ShowModal()!=wxID_YES) {
+        wxMessageDialog dial = wxMessageDialog(NULL, __TUTF8("You have already an open database. By importing from a CSV file any duplicate mineral id will overwrite existing ones. Do you want to continue?"), __TUTF8("Question"), wxYES_NO|wxNO_DEFAULT|wxICON_QUESTION);
+        dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
+        if (dial.ShowModal()!=wxID_YES) {
             return;
         }
     } else {
@@ -744,7 +758,7 @@ void MainFrame::import_csv(wxCommandEvent& event) {
     }
 
     /* Get the filename of the db to read */
-    wxFileDialog openFileDialog(this, "Import CSV file", wxEmptyString, "minerals.csv",  "CSV files (*.csv)|*.csv", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+    wxFileDialog openFileDialog(this, __TUTF8("Import CSV file"), wxEmptyString, "minerals.csv",  __TUTF8("CSV files (*.csv)|*.csv"), wxFD_OPEN|wxFD_FILE_MUST_EXIST);
     if (openFileDialog.ShowModal()==wxID_CANCEL) {
         return;
     }
@@ -752,17 +766,17 @@ void MainFrame::import_csv(wxCommandEvent& event) {
 
     bool success = db_csv_import(db, fname.ToStdString(), &errmsg);
     if (!success) {
-        wxLogMessage(wxString("Import failed! ") + errmsg);
+        wxLogMessage(__TUTF8("Import failed! ") + errmsg);
     }
     update_gui();
 }
 
 void MainFrame::export_csv(wxCommandEvent& event) {
     if (!db) {
-        wxLogMessage("Nothing to save!");
+        wxLogMessage(__TUTF8("Nothing to save!"));
         return;
     }
-    wxFileDialog saveFileDialog(this, "Export CSV file", wxEmptyString, "minerals.csv",  "CSV files (*.csv)|*.csv", wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
+    wxFileDialog saveFileDialog(this, __TUTF8("Export CSV file"), wxEmptyString, "minerals.csv",  __TUTF8("CSV files (*.csv)|*.csv"), wxFD_SAVE|wxFD_OVERWRITE_PROMPT);
     if (saveFileDialog.ShowModal() == wxID_CANCEL) {
         return;
     }
@@ -814,6 +828,37 @@ void MainFrame::read_config() {
         update_gui();
     }
 }
+Translator::LANG_t MainFrame::read_lang_from_config() {
+
+    Translator::LANG_t ret = Translator::LANG_t::LANG_EN;
+
+    fs::path configdir = get_config_dirname();
+    if (configdir.empty()) return ret;
+    if (!fs::exists(configdir)) return ret;
+    std::ifstream configfile;
+    configfile.open(configdir/"config.txt");
+    std::string last_lang;
+    std::string line;
+    while (std::getline(configfile, line)) {
+        std::istringstream is_line(line);
+        std::string key;
+        if (std::getline(is_line, key, '=')) {
+            std::string value;
+            if (std::getline(is_line, value)) {
+                if (key.compare(std::string("last_lang"))==0) {
+                    last_lang = value;
+                }
+            }
+        }
+    }
+    configfile.close();
+    if (!last_lang.empty()) {
+        const int _tmp = std::atoi(last_lang.c_str());
+        if(_tmp > Translator::LANG_t::LANG_INVALID && _tmp < Translator::LANG_t::LANG_SIZE)
+            ret = (Translator::LANG_t)_tmp;
+    }
+    return ret;
+}
 
 
 void MainFrame::write_config() {
@@ -823,13 +868,32 @@ void MainFrame::write_config() {
     std::ofstream configfile;
     configfile.open(fs::path(configdir)/"config.txt");
     configfile << "last_open=" << db_file_path << std::endl;
+    configfile << "last_lang=" << std::to_string(CURRENT_LANG()) << std::endl;
     configfile.close();
 }
 
 void MainFrame::OnGenReport(wxCommandEvent& event) {
     int minid = get_minid_from_listbox(false);
-    GenReportFrame *frame = new GenReportFrame(this, "Generate printable report", db, minid, db_file_path);
+    GenReportFrame *frame = new GenReportFrame(this, __TUTF8("Generate printable report"), db, minid, db_file_path);
     frame->Show();
+}
+void MainFrame::OnSelectEN(wxCommandEvent& event) {
+    const auto msg = __TUTF8("MineralApp must close to change the language. All edits will be lost if you did not save them. Close MineralApp?");
+    wxMessageDialog dial(this, msg, __TUTF8("Are you sure you want to close MineralApp?"), wxYES_NO | wxNO_DEFAULT);
+    dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
+    if (dial.ShowModal() != wxID_YES) return;
+    SET_LANG_BEFORE_REBOOT(Translator::LANG_t::LANG_EN);
+    write_config();
+    Close(true);
+}
+void MainFrame::OnSelectFR(wxCommandEvent& event) {
+    const auto msg = __TUTF8("MineralApp must close to change the language. All edits will be lost if you did not save them. Close MineralApp?");
+    wxMessageDialog dial(this, msg, __TUTF8("Are you sure you want to close MineralApp?"), wxYES_NO | wxNO_DEFAULT);
+    dial.SetYesNoLabels(__TUTF8("Yes"), __TUTF8("No"));
+    if (dial.ShowModal() != wxID_YES) return;
+    SET_LANG_BEFORE_REBOOT(Translator::LANG_t::LANG_FR);
+    write_config();
+    Close(true);
 }
 
 

@@ -4,7 +4,8 @@
 
 #include <vector>
 #include <string>
-#include <sqlite3.h> 
+#include <sqlite3.h>
+#include <wx/string.h>
 
 #if defined(__cplusplus) && __cplusplus >= 201703L && defined(__has_include)
   #if __has_include(<filesystem>)
@@ -59,6 +60,7 @@ void db_duplicate_mineral(sqlite3 *db, int minid, std::string *errmsg);
 int db_addmod_mineral(sqlite3 *db, std::vector<std::string> data, int minid_mod, std::string *errmsg);
 std::vector<std::string> db_get_data(sqlite3 *db, int minid, std::string *errmsg, int header_version=-1);
 std::string db_get_field(std::vector<std::string> data, std::string field, bool remove_no=true);
+wxString db_get_field_utf8(std::vector<std::string> data, std::string field, bool remove_no=true);
 
 int db_get_field_index(std::string field);
 int db_get_field_index_200(std::string field);
